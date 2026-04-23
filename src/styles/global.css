@@ -105,7 +105,13 @@ a {
 .app {
   max-width: 920px;
   margin: 0 auto;
-  padding: 24px 20px 80px;
+  /* 하단 탭바(64px) + FAB 여유 + iOS safe-area */
+  padding: 20px 20px calc(88px + env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 600px) {
+  .app {
+    padding: 16px 14px calc(88px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .topbar {
@@ -624,8 +630,9 @@ hr {
 
 .fab-tx {
   position: fixed;
-  right: 24px;
-  bottom: 24px;
+  right: 20px;
+  /* 하단 탭바 위로 띄움 */
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
   z-index: 90;
   display: inline-flex;
   align-items: center;
@@ -665,9 +672,53 @@ hr {
 @media (max-width: 480px) {
   .fab-tx {
     right: 16px;
-    bottom: 16px;
-    padding: 12px 18px;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    padding: 10px 16px;
+    font-size: 14px;
   }
+}
+
+/* ─── 하단 탭바 ─── */
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 85;
+  display: flex;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+}
+.bnav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 10px 4px 8px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 500;
+  transition: color 0.1s;
+  min-height: 56px;
+}
+.bnav-item:hover {
+  color: var(--text);
+}
+.bnav-item.active {
+  color: var(--accent);
+}
+.bnav-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+.bnav-label {
+  font-size: 11px;
+  line-height: 1;
 }
 
 .big-stat {

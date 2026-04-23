@@ -9,6 +9,7 @@ import WhatIf from './pages/WhatIf';
 import Settings from './pages/Settings';
 import LowBalanceToast from './components/LowBalanceToast';
 import GlobalTxButton from './components/GlobalTxButton';
+import BottomNav from './components/BottomNav';
 
 // Stats는 recharts를 쓰므로 lazy-load (초기 번들에서 제외 → 모바일 초기 로딩 빠르게)
 const Stats = lazy(() => import('./pages/Stats'));
@@ -37,28 +38,18 @@ export default function App() {
         <div className="brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
           <a>🥧 one-pie</a>
         </div>
-        <div className="row" style={{ gap: 6 }}>
-          <button
-            className="ghost"
-            onClick={() => navigate('/stats')}
-            title="통계"
-            style={{ fontSize: 13 }}
-          >
-            📊 통계
-          </button>
-          <button
-            className="user-chip"
-            onClick={() => {
-              setCurrentUser(null);
-              navigate('/');
-            }}
-            title="사용자 전환"
-          >
-            <span>{currentUser?.emoji ?? '👤'}</span>
-            <span>{currentUser?.name ?? ''}</span>
-            <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>전환 ▾</span>
-          </button>
-        </div>
+        <button
+          className="user-chip"
+          onClick={() => {
+            setCurrentUser(null);
+            navigate('/');
+          }}
+          title="사용자 전환"
+        >
+          <span>{currentUser?.emoji ?? '👤'}</span>
+          <span>{currentUser?.name ?? ''}</span>
+          <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>전환 ▾</span>
+        </button>
       </div>
 
       <LowBalanceToast />
@@ -81,6 +72,7 @@ export default function App() {
       </Routes>
 
       <GlobalTxButton />
+      <BottomNav />
     </div>
   );
 }
