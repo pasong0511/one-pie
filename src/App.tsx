@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo } from 'react';
+import { lazy, Suspense, useEffect, useMemo } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from './store';
 import Login from './pages/Login';
@@ -19,7 +19,12 @@ export default function App() {
   const currentUserId = useStore((s) => s.currentUserId);
   const users = useStore((s) => s.users);
   const setCurrentUser = useStore((s) => s.setCurrentUser);
+  const materializeRecurringRules = useStore((s) => s.materializeRecurringRules);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (currentUserId) materializeRecurringRules();
+  }, [currentUserId, materializeRecurringRules]);
 
   const currentUser = users.find((u) => u.id === currentUserId);
   const location = useLocation();

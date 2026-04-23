@@ -4,9 +4,10 @@ import { useStore } from '../store';
 import PropertyPanel from '../components/PropertyPanel';
 import GoalEditor from '../components/GoalEditor';
 import InviteModal from '../components/InviteModal';
+import RecurringRuleModal from '../components/RecurringRuleModal';
 import { visibleGoals } from '../utils/selectors';
 import { formatKRW } from '../utils/format';
-import { ACCOUNT_TYPE_META } from '../types';
+import { ACCOUNT_TYPE_META, RECURRING_INTERVAL_META } from '../types';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -27,6 +28,10 @@ export default function Settings() {
   const [overId, setOverId] = useState<string | null>(null);
   const [goalEditing, setGoalEditing] = useState<{ id?: string } | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [ruleEditing, setRuleEditing] = useState<{ id?: string } | null>(null);
+  const recurringRules = useStore((s) => s.recurringRules);
+  const materialize = useStore((s) => s.materializeRecurringRules);
+  const myRules = recurringRules.filter((r) => r.ownerId === currentUserId);
   const familyGroups = useStore((s) => s.familyGroups);
   const myGroup = familyGroups.find((g) => g.id === me?.familyGroupId);
   const members = (myGroup?.memberIds ?? [])
@@ -222,6 +227,68 @@ export default function Settings() {
         </div>
       ))}
 
+      <div className="section-title">
+        반복 거래
+        <button className="ghost" onClick={() => setRuleEditing({})}>
+          + 새 반복 규칙
+        </button>
+      </div>
+      {myRules.length === 0 && (
+        <div className="empty">
+          반복 규칙이 없어요. 월급, 구독료 등 주기적으로 기록되는 거래를 자동화하세요.
+        </div>
+      )}
+      {myRules.map((r) => {
+        const a = accounts.find((x) => x.id === r.accountId);
+        const signed = r.kind === 'expense' ? -r.amount : r.amount;
+        return (
+          <div key={r.id} className="card" style={{ marginBottom: 8 }}>
+            <div className="row between">
+              <div>
+                <div style={{ fontWeight: 600 }}>
+                  {r.kind === 'expense' ? '📤 지출' : '📥 입금'} {formatKRW(signed)}
+                  {!r.enabled && (
+                    <span
+                      className="chip"
+                      style={{ marginLeft: 6, background: 'var(--bg-hover)' }}
+                    >
+                      ⏸ 일시중지
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                  {a ? `${a.emoji} ${a.name}` : '계좌 없음'} ·{' '}
+                  {RECURRING_INTERVAL_META[r.interval].label} · {r.startDate}
+                  {r.endDate ? ` ~ ${r.endDate}` : ' ~ 무기한'}
+                  {r.category ? ` · ${r.category}` : ''}
+                </div>
+                {r.memo && (
+                  <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 2 }}>
+                    {r.memo}
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button onClick={() => setRuleEditing({ id: r.id })}>편집</button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      {myRules.length > 0 && (
+        <div style={{ marginTop: 6 }}>
+          <button
+            className="ghost"
+            onClick={() => {
+              const n = materialize();
+              alert(n > 0 ? `${n}건의 거래를 자동 생성했습니다.` : '새로 생성할 거래가 없습니다.');
+            }}
+          >
+            🔄 지금 적용하기
+          </button>
+        </div>
+      )}
+
       <div className="section-title">가족</div>
       <div className="card">
         <div style={{ fontSize: 13 }}>
@@ -278,6 +345,12 @@ export default function Settings() {
         />
       )}
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
+      {ruleEditing && (
+        <RecurringRuleModal
+          ruleId={ruleEditing.id}
+          onClose={() => setRuleEditing(null)}
+        />
+      )}
     </div>
   );
 }

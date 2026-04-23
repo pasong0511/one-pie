@@ -10,6 +10,7 @@ import {
 import { formatKRW, todayISO, monthOf } from '../utils/format';
 import CategoryChips from './CategoryChips';
 import CategoryManagerModal from './CategoryManagerModal';
+import CalculatorModal from './CalculatorModal';
 
 export default function TransactionModal({
   defaultAccountId,
@@ -58,6 +59,7 @@ export default function TransactionModal({
   const [isSupplement, setIsSupplement] = useState<boolean>(editingTx?.isSupplement ?? false);
   const [showWarn, setShowWarn] = useState(false);
   const [catManagerOpen, setCatManagerOpen] = useState(false);
+  const [calcOpen, setCalcOpen] = useState(false);
 
   const canEdit =
     !isEdit || (acc && editingTx ? canEditTransaction(currentUserId, acc, editingTx) : false);
@@ -238,14 +240,24 @@ export default function TransactionModal({
 
           <label className="field">
             <span className="label-text">금액</span>
-            <input
-              type="number"
-              value={amount || ''}
-              onChange={(e) => {
-                setAmount(Number(e.target.value));
-                setShowWarn(false);
-              }}
-            />
+            <div className="amount-row">
+              <input
+                type="number"
+                value={amount || ''}
+                onChange={(e) => {
+                  setAmount(Number(e.target.value));
+                  setShowWarn(false);
+                }}
+              />
+              <button
+                type="button"
+                className="calc-open-btn"
+                onClick={() => setCalcOpen(true)}
+                title="계산기 열기"
+              >
+                🧮
+              </button>
+            </div>
           </label>
 
           <label className="field">
@@ -344,6 +356,16 @@ export default function TransactionModal({
         <CategoryManagerModal
           accountId={acc.id}
           onClose={() => setCatManagerOpen(false)}
+        />
+      )}
+      {calcOpen && (
+        <CalculatorModal
+          initialValue={amount}
+          onApply={(v) => {
+            setAmount(v);
+            setShowWarn(false);
+          }}
+          onClose={() => setCalcOpen(false)}
         />
       )}
     </div>

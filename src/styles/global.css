@@ -1006,3 +1006,101 @@ hr {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+
+/* 거래 기록 금액 옆 계산기 버튼 */
+.amount-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.amount-row input {
+  flex: 1;
+}
+.calc-open-btn {
+  flex-shrink: 0;
+  padding: 0 14px;
+  font-size: 18px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.calc-open-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+/* 계산기 모달 */
+.modal.calc-modal {
+  max-width: 340px;
+}
+.calc-display {
+  background: var(--bg-alt);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  text-align: right;
+}
+.calc-expr {
+  font-size: 13px;
+  color: var(--text-muted);
+  min-height: 18px;
+  letter-spacing: var(--tracking);
+  word-break: break-all;
+}
+.calc-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-strong);
+  letter-spacing: var(--tracking-tight);
+  word-break: break-all;
+  line-height: 1.2;
+}
+.calc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.calc-btn {
+  padding: 14px 0;
+  font-size: 16px;
+  font-weight: 600;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-strong);
+}
+.calc-btn:hover {
+  background: var(--bg-hover);
+}
+.calc-btn.wide {
+  grid-column: span 2;
+}
+.calc-btn.ghost {
+  background: var(--bg-alt);
+  color: var(--text-muted);
+}
+.calc-btn.ghost:hover {
+  background: var(--bg-hover);
+}
+.calc-btn.op {
+  background: var(--accent-weak);
+  color: var(--accent-dark);
+  border-color: transparent;
+}
+.calc-btn.op:hover {
+  background: #d7e7fc;
+}
+.calc-btn.op.active {
+  background: var(--accent);
+  color: white;
+}
+.calc-btn.accent {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.calc-btn.accent:hover {
+  background: var(--accent-dark);
+}
