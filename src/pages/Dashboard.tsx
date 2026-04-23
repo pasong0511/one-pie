@@ -6,6 +6,7 @@ import { Account, ACCOUNT_TYPE_META } from '../types';
 import { useState } from 'react';
 import GoalEditor from '../components/GoalEditor';
 import WhatIfButton from '../components/WhatIfButton';
+import MonthNavigator from '../components/MonthNavigator';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ export default function Dashboard() {
   const [goalOpen, setGoalOpen] = useState<{ id?: string } | null>(null);
   const [goalFilter, setGoalFilter] = useState<'all' | 'private' | 'family'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | '진행중' | '완료' | '실패'>('all');
-  const month = currentMonth();
+  const [month, setMonth] = useState<string>(currentMonth());
 
   const visible = visibleAccounts(currentUserId, accounts);
   const my = visible.filter((a) => a.ownerId === currentUserId);
@@ -225,11 +226,22 @@ export default function Dashboard() {
         </>
       )}
 
-      <div className="section-title">
-        내 계좌
+      <div className="section-title" style={{ marginTop: 32 }}>
+        계좌
         <button className="ghost" onClick={() => navigate('/settings')}>
           + 새 계좌
         </button>
+      </div>
+      <MonthNavigator month={month} onChange={setMonth} />
+      <div
+        style={{
+          fontSize: 12,
+          color: 'var(--text-muted)',
+          fontWeight: 600,
+          margin: '4px 0 6px',
+        }}
+      >
+        내 계좌
       </div>
       {my.length === 0 && <div className="empty">아직 계좌가 없어요.</div>}
       {my.map((a) => (
@@ -237,7 +249,7 @@ export default function Dashboard() {
           key={a.id}
           account={a}
           month={month}
-          onClick={() => navigate(`/account/${a.id}`)}
+          onClick={() => navigate(`/account/${a.id}`, { state: { month } })}
           accounts={accounts}
           transactions={transactions}
         />
@@ -245,13 +257,22 @@ export default function Dashboard() {
 
       {shared.length > 0 && (
         <>
-          <div className="section-title">공유받은 계좌</div>
+          <div
+            style={{
+              fontSize: 12,
+              color: 'var(--text-muted)',
+              fontWeight: 600,
+              margin: '16px 0 6px',
+            }}
+          >
+            공유받은 계좌
+          </div>
           {shared.map((a) => (
             <AccountCard
               key={a.id}
               account={a}
               month={month}
-              onClick={() => navigate(`/account/${a.id}`)}
+              onClick={() => navigate(`/account/${a.id}`, { state: { month } })}
               accounts={accounts}
               transactions={transactions}
               sharedFromLabel

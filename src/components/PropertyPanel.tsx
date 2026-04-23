@@ -9,16 +9,18 @@ import {
   EditPolicy,
   Sharing,
 } from '../types';
-import { formatKRW, currentMonth } from '../utils/format';
+import { addMonths, formatKRW, currentMonth } from '../utils/format';
 import { uid } from '../utils/id';
 import CategoryChips from './CategoryChips';
 import CategoryManagerModal from './CategoryManagerModal';
 
 export default function PropertyPanel({
   accountId,
+  month: monthProp,
   onClose,
 }: {
   accountId: string;
+  month?: string;          // 편집 대상 월 (기본: 현재 달)
   onClose: () => void;
 }) {
   const navigate = useNavigate();
@@ -58,7 +60,7 @@ export default function PropertyPanel({
   const [alertNotify, setAlertNotify] = useState<'owner' | 'all'>(
     account?.lowBalanceAlert?.notify ?? 'owner',
   );
-  const month = currentMonth();
+  const month = monthProp ?? currentMonth();
   const [allocs, setAllocs] = useState<Record<string, number>>(
     account?.budgetAllocations[month] ?? {},
   );
@@ -297,26 +299,52 @@ export default function PropertyPanel({
             </select>
           </label>
 
-          {mode === '차감형' && (
-            <label className="field">
-              <span className="label-text">이번달({month}) 예산</span>
-              <div className="row">
-                <input
-                  type="number"
-                  value={monthlyBudget || ''}
-                  placeholder="예: 500000"
-                  onChange={(e) => setMonthlyBudget(Number(e.target.value) || 0)}
-                  style={{ flex: 1 }}
-                />
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>원</span>
-              </div>
-              <div className="hint">
-                이 계좌의 이번달 총 예산. 카테고리 배정합(
-                {formatKRW(Object.values(allocs).reduce((s, v) => s + v, 0))})
-                과 별개로 "덩어리 예산"을 지정. 비워두면 카테고리 합이 초기배정이 됩니다.
-              </div>
-            </label>
-          )}
+          {mode === '차감형' && (() => {
+            const prevMonth = addMonths(month, -1);
+            const prevTotal = account?.monthlyBudget?.[prevMonth] ?? 0;
+            const prevAllocs = account?.budgetAllocations[prevMonth] ?? {};
+            const prevAllocSum = Object.values(prevAllocs).reduce((s, v) => s + v, 0);
+            const currentEmpty =
+              monthlyBudget === 0 &&
+              Object.values(allocs).reduce((s, v) => s + v, 0) === 0;
+            const canCopy = currentEmpty && (prevTotal > 0 || prevAllocSum > 0);
+            const copyFromPrev = () => {
+              if (prevTotal > 0) setMonthlyBudget(prevTotal);
+              if (prevAllocSum > 0) setAllocs({ ...prevAllocs });
+            };
+            return (
+              <label className="field">
+                <div className="cat-field-header">
+                  <span className="label-text">{month} 예산</span>
+                  {canCopy && (
+                    <button
+                      type="button"
+                      className="cat-gear"
+                      onClick={copyFromPrev}
+                      title={`${prevMonth} 설정 복사`}
+                    >
+                      📋 {prevMonth} 복사
+                    </button>
+                  )}
+                </div>
+                <div className="row">
+                  <input
+                    type="number"
+                    value={monthlyBudget || ''}
+                    placeholder="예: 500000"
+                    onChange={(e) => setMonthlyBudget(Number(e.target.value) || 0)}
+                    style={{ flex: 1 }}
+                  />
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>원</span>
+                </div>
+                <div className="hint">
+                  이 계좌의 {month} 총 예산. 카테고리 배정합(
+                  {formatKRW(Object.values(allocs).reduce((s, v) => s + v, 0))})
+                  과 별개로 "덩어리 예산"을 지정. 비워두면 카테고리 합이 초기배정이 됩니다.
+                </div>
+              </label>
+            );
+          })()}
 
           <label className="field">
             <div className="cat-field-header">

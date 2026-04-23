@@ -678,6 +678,41 @@ hr {
   }
 }
 
+/* ─── 월 Navigator ─── */
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+  margin-bottom: 16px;
+}
+.month-nav button {
+  border: none;
+  background: transparent;
+  padding: 6px 12px;
+  font-size: 16px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.month-nav button:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.month-nav .month-nav-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+}
+.month-nav .month-nav-today {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
 /* ─── 달력 ─── */
 .cal-card {
   padding: 12px;

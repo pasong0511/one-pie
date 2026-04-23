@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useStore, remainingBudget, cumulativeBalance } from '../store';
 import {
   canDeleteTransaction,
@@ -14,11 +14,14 @@ import { formatKRW, currentMonth } from '../utils/format';
 import TransactionModal from '../components/TransactionModal';
 import PropertyPanel from '../components/PropertyPanel';
 import SettlementModal from '../components/SettlementModal';
+import MonthNavigator from '../components/MonthNavigator';
 import { ACCOUNT_TYPE_META } from '../types';
 
 export default function AccountDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const navState = (location.state ?? null) as { month?: string } | null;
   const currentUserId = useStore((s) => s.currentUserId)!;
   const account = useStore((s) => s.accounts.find((a) => a.id === id));
   const accounts = useStore((s) => s.accounts);
@@ -28,7 +31,7 @@ export default function AccountDetail() {
   const [txOpen, setTxOpen] = useState<{ txId?: string } | null>(null);
   const [propOpen, setPropOpen] = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
-  const month = currentMonth();
+  const [month, setMonth] = useState<string>(navState?.month ?? currentMonth());
 
   if (!account) {
     return (
@@ -51,10 +54,12 @@ export default function AccountDetail() {
 
   const writable = canWrite(currentUserId, account);
   const linkedGoal = goals.find((g) => g.id === account.goalId);
+  // 선택한 월의 거래만 표시. 누적형도 월별 필터 적용 (잔액은 전체 누적이지만 목록은 해당 월)
   const txList = transactions
-    .filter((t) => t.accountId === account.id)
-    .sort((a, b) => (a.date < b.date ? 1 : -1))
-    .slice(0, 50);
+    .filter((t) => t.accountId === account.id && t.date.startsWith(month))
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+  const hasAnyInOtherMonths =
+    transactions.some((t) => t.accountId === account.id && !t.date.startsWith(month));
 
   return (
     <div>
@@ -70,7 +75,7 @@ export default function AccountDetail() {
       <h2 style={{ margin: '0 0 4px' }}>
         {account.emoji ?? '📒'} {account.name}
       </h2>
-      <div style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 16 }}>
+      <div style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 12 }}>
         <span className="chip" style={{ marginRight: 4 }}>
           {ACCOUNT_TYPE_META[account.type ?? '계좌'].emoji} {ACCOUNT_TYPE_META[account.type ?? '계좌'].label}
         </span>
@@ -89,6 +94,8 @@ export default function AccountDetail() {
         </span>
         <span style={{ marginLeft: 8 }}>· 소유: {users.find((u) => u.id === account.ownerId)?.name}</span>
       </div>
+
+      <MonthNavigator month={month} onChange={setMonth} />
 
       {account.mode === '차감형' ? (
         <DeductiveSummary
@@ -155,9 +162,19 @@ export default function AccountDetail() {
         })}
       </div>
 
-      <div className="section-title">최근 거래</div>
+      <div className="section-title">
+        {month}의 거래
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400 }}>
+          {txList.length > 0 && `${txList.length}건`}
+        </span>
+      </div>
       <div className="card">
-        {txList.length === 0 && <div className="empty">거래가 없어요.</div>}
+        {txList.length === 0 && (
+          <div className="empty">
+            이 달 거래가 없어요.
+            {hasAnyInOtherMonths && ' (다른 달에는 있음 — ‹ › 로 이동)'}
+          </div>
+        )}
         {txList.map((t) => {
           const authorName = users.find((u) => u.id === t.authorId)?.name ?? '—';
           const editable = canEditTransaction(currentUserId, account, t);
@@ -217,7 +234,7 @@ export default function AccountDetail() {
           onClose={() => setTxOpen(null)}
         />
       )}
-      {propOpen && <PropertyPanel accountId={account.id} onClose={() => setPropOpen(false)} />}
+      {propOpen && <PropertyPanel accountId={account.id} month={month} onClose={() => setPropOpen(false)} />}
       {settleOpen && (
         <SettlementModal
           accountId={account.id}
@@ -225,6 +242,7 @@ export default function AccountDetail() {
           onClose={() => setSettleOpen(false)}
         />
       )}
+      {/* 월은 상단 MonthNavigator에서 전환 → SettlementModal, DeductiveSummary, category rows 모두 같은 month 참조 */}
     </div>
   );
 }
