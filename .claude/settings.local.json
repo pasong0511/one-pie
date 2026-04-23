@@ -7,7 +7,18 @@
       "Bash(npm run *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(npm ls *)"
+      "Bash(npm ls *)",
+      "Bash(mkdir -p /tmp/design-extract)",
+      "Bash(cp \"C:\\\\Users\\\\songhee\\\\.claude\\\\projects\\\\D--code-one-pie\\\\ee0526f7-0f95-4dd4-9c9f-ea52a3cff7a1\\\\tool-results\\\\webfetch-1776954467553-er6nb1.bin\" /tmp/design-extract/design.gz)",
+      "Read(//tmp/**)",
+      "Bash(gunzip -f design.gz)",
+      "Bash(mkdir -p contents)",
+      "Bash(tar -xf design -C contents)",
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(rm -rf /tmp/design-extract2)",
+      "Bash(mkdir -p /tmp/design-extract2)",
+      "Bash(cp \"C:\\\\Users\\\\songhee\\\\.claude\\\\projects\\\\D--code-one-pie\\\\ee0526f7-0f95-4dd4-9c9f-ea52a3cff7a1\\\\tool-results\\\\webfetch-1776955193531-wcal0w.bin\" /tmp/design-extract2/design.gz)",
+      "Bash(tar -xf design)"
     ]
   }
 }
