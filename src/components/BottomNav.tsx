@@ -2,8 +2,8 @@ import { NavLink } from 'react-router-dom';
 
 const TABS: { to: string; icon: string; label: string; end?: boolean }[] = [
   { to: '/', icon: '🏠', label: '홈', end: true },
+  { to: '/calendar', icon: '📅', label: '달력' },
   { to: '/stats', icon: '📊', label: '통계' },
-  { to: '/what-if', icon: '🤔', label: '영향' },
   { to: '/settings', icon: '⚙️', label: '설정' },
 ];
 

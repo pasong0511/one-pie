@@ -7,6 +7,7 @@ import AccountDetail from './pages/AccountDetail';
 import GoalDetail from './pages/GoalDetail';
 import WhatIf from './pages/WhatIf';
 import Settings from './pages/Settings';
+import Calendar from './pages/Calendar';
 import LowBalanceToast from './components/LowBalanceToast';
 import GlobalTxButton from './components/GlobalTxButton';
 import BottomNav from './components/BottomNav';
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/account/:id" element={<AccountDetail />} />
         <Route path="/goal/:id" element={<GoalDetail />} />
+        <Route path="/calendar" element={<Calendar />} />
         <Route path="/what-if" element={<WhatIf />} />
         <Route
           path="/stats"

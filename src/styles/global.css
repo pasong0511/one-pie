@@ -678,6 +678,137 @@ hr {
   }
 }
 
+/* ─── 달력 ─── */
+.cal-card {
+  padding: 12px;
+}
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.cal-header .cal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  padding: 4px 14px;
+}
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.cal-weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 0;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.cal-cell {
+  aspect-ratio: 1 / 1.1;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 4px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text);
+  transition: background 0.08s, border-color 0.08s;
+  min-height: 48px;
+}
+.cal-cell:hover:not(.empty):not(.selected) {
+  background: var(--bg-hover);
+}
+.cal-cell.empty {
+  cursor: default;
+  pointer-events: none;
+}
+.cal-cell.today {
+  border-color: var(--accent);
+}
+.cal-cell.selected {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.cal-cell.selected .cal-day {
+  color: white !important;
+}
+.cal-cell .cal-day {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  margin-top: 2px;
+}
+.cal-cell .cal-sum {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+  font-size: 9px;
+  gap: 1px;
+}
+.cal-cell .cal-sum-pos {
+  color: var(--accent);
+}
+.cal-cell .cal-sum-neg {
+  color: var(--danger);
+}
+.cal-cell.selected .cal-sum-pos,
+.cal-cell.selected .cal-sum-neg {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.cal-tx-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.cal-tx-item:last-child {
+  border-bottom: none;
+}
+.cal-tx-left {
+  flex: 1;
+  min-width: 0;
+}
+.cal-tx-acc {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.cal-tx-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-tx-amt {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cal-tx-amt.pos {
+  color: var(--accent);
+}
+.cal-tx-amt.neg {
+  color: var(--danger);
+}
+
 /* ─── 하단 탭바 ─── */
 .bottom-nav {
   position: fixed;
