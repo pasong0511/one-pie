@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import PropertyPanel from '../components/PropertyPanel';
 import GoalEditor from '../components/GoalEditor';
+import InviteModal from '../components/InviteModal';
 import { visibleGoals } from '../utils/selectors';
 import { formatKRW } from '../utils/format';
 import { ACCOUNT_TYPE_META } from '../types';
@@ -25,6 +26,12 @@ export default function Settings() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [goalEditing, setGoalEditing] = useState<{ id?: string } | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const familyGroups = useStore((s) => s.familyGroups);
+  const myGroup = familyGroups.find((g) => g.id === me?.familyGroupId);
+  const members = (myGroup?.memberIds ?? [])
+    .map((id) => users.find((u) => u.id === id))
+    .filter((u): u is NonNullable<typeof u> => !!u);
 
   const createNew = () => {
     const a = addAccount({
@@ -217,11 +224,29 @@ export default function Settings() {
 
       <div className="section-title">가족</div>
       <div className="card">
-        <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-          현재 그룹: {me.familyGroupId ?? '없음'}
-          <div style={{ fontSize: 12, marginTop: 4 }}>
-            (프로토타입: 초대 UI 미구현. 시드 데이터의 동건/송희가 기본 fg_01 그룹 공유)
+        <div style={{ fontSize: 13 }}>
+          <div style={{ color: 'var(--text-muted)', marginBottom: 8 }}>
+            가족 그룹: <strong style={{ color: 'var(--text)' }}>{myGroup?.name ?? me.familyGroupId ?? '없음'}</strong>
           </div>
+          {members.length > 0 && (
+            <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+              {members.map((m) => (
+                <span
+                  key={m.id}
+                  className="chip"
+                  style={{ padding: '6px 10px', fontSize: 12 }}
+                >
+                  {m.emoji ?? '👤'} {m.name}
+                  {m.id === currentUserId && (
+                    <span style={{ color: 'var(--text-faint)', marginLeft: 4 }}>(나)</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          )}
+          <button className="primary" onClick={() => setInviteOpen(true)}>
+            + 가족 구성원 초대 (QR)
+          </button>
         </div>
       </div>
 
@@ -252,6 +277,7 @@ export default function Settings() {
           onClose={() => setGoalEditing(null)}
         />
       )}
+      {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
     </div>
   );
 }

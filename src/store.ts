@@ -5,6 +5,7 @@ import { buildSeed } from './seed';
 import { uid } from './utils/id';
 import { monthOf, currentMonth } from './utils/format';
 import { sumSpentInMonth } from './utils/selectors';
+import { InvitePayload } from './utils/invite';
 
 type State = {
   currentUserId: string | null;
@@ -18,6 +19,8 @@ type State = {
 
 type Actions = {
   setCurrentUser: (id: string | null) => void;
+  signUp: (name: string, emoji?: string) => User;
+  acceptInvite: (payload: InvitePayload, name: string, emoji?: string) => User;
   addAccount: (input: Omit<Account, 'id' | 'createdAt'>) => Account;
   updateAccount: (id: string, patch: Partial<Account>) => void;
   deleteAccount: (id: string) => void;
@@ -59,6 +62,87 @@ export const useStore = create<Store>()(
       ...emptyState,
 
       setCurrentUser: (id) => set({ currentUserId: id }),
+
+      signUp: (name, emoji) => {
+        const trimmed = name.trim();
+        if (!trimmed) throw new Error('이름을 입력해주세요');
+        const userId = uid('u');
+        const fgId = uid('fg');
+        const user: User = {
+          id: userId,
+          name: trimmed,
+          emoji: emoji || '👤',
+          familyGroupId: fgId,
+        };
+        const group: FamilyGroup = {
+          id: fgId,
+          name: trimmed,
+          memberIds: [userId],
+        };
+        set((s) => ({
+          users: [...s.users, user],
+          familyGroups: [...s.familyGroups, group],
+          currentUserId: userId,
+          initialized: true,
+        }));
+        return user;
+      },
+
+      acceptInvite: (payload, name, emoji) => {
+        const trimmed = name.trim();
+        if (!trimmed) throw new Error('이름을 입력해주세요');
+        const state = get();
+        const userId = uid('u');
+        const newUser: User = {
+          id: userId,
+          name: trimmed,
+          emoji: emoji || '👤',
+          familyGroupId: payload.familyGroupId,
+        };
+
+        // inviter stub 처리: 로컬에 없으면 새로 추가
+        const users = [...state.users];
+        const inviterExists = users.some((u) => u.id === payload.inviter.id);
+        if (!inviterExists) {
+          users.push({
+            id: payload.inviter.id,
+            name: payload.inviter.name,
+            emoji: payload.inviter.emoji || '👤',
+            familyGroupId: payload.familyGroupId,
+          });
+        }
+        users.push(newUser);
+
+        // 가족 그룹 처리: 없으면 생성, 있으면 멤버 추가
+        const groups = [...state.familyGroups];
+        const gi = groups.findIndex((g) => g.id === payload.familyGroupId);
+        if (gi === -1) {
+          const memberIds = [payload.inviter.id, userId].filter(
+            (id, idx, arr) => arr.indexOf(id) === idx,
+          );
+          groups.push({
+            id: payload.familyGroupId,
+            name: payload.familyGroupName,
+            memberIds,
+          });
+        } else {
+          const g = groups[gi];
+          const memberIds = [...g.memberIds];
+          if (!inviterExists && !memberIds.includes(payload.inviter.id)) {
+            memberIds.push(payload.inviter.id);
+          }
+          if (!memberIds.includes(userId)) memberIds.push(userId);
+          groups[gi] = { ...g, memberIds };
+        }
+
+        set({
+          users,
+          familyGroups: groups,
+          currentUserId: userId,
+          initialized: true,
+        });
+        return newUser;
+      },
 
       addAccount: (input) => {
         const account: Account = {
@@ -265,11 +349,12 @@ export const useStore = create<Store>()(
   ),
 );
 
-// 초기화: 첫 로드시 시드 자동 주입
+// 초기화: 첫 로드시 initialized 플래그만 세팅 (빈 상태로 시작 — 가입/초대 수락 유도)
+// 시드 데이터는 Login 화면의 "샘플 데이터 로드" 버튼으로 명시적으로만 주입.
 export function initStoreIfEmpty() {
   const s = useStore.getState();
-  if (!s.initialized || s.users.length === 0) {
-    s.loadSeed();
+  if (!s.initialized) {
+    useStore.setState({ initialized: true });
   }
 }
 

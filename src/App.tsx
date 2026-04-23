@@ -1,5 +1,5 @@
-import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { lazy, Suspense, useMemo } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from './store';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -22,8 +22,13 @@ export default function App() {
   const navigate = useNavigate();
 
   const currentUser = users.find((u) => u.id === currentUserId);
+  const location = useLocation();
+  const hasInvite = useMemo(
+    () => new URLSearchParams(location.search).has('invite'),
+    [location.search],
+  );
 
-  if (!currentUserId) {
+  if (!currentUserId || hasInvite) {
     return (
       <div className="app">
         <Routes>
