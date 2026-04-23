@@ -18,6 +18,7 @@ import {
 import { useStore } from '../store';
 import { visibleAccounts } from '../utils/selectors';
 import { addMonths, currentMonth, formatCompact, formatKRW } from '../utils/format';
+import MonthNavigator from '../components/MonthNavigator';
 
 type MonthRow = {
   month: string;
@@ -55,8 +56,7 @@ export default function Stats() {
   const transactions = useStore((s) => s.transactions);
   const goals = useStore((s) => s.goals);
   const [range, setRange] = useState<6 | 12>(6);
-
-  const month = currentMonth();
+  const [month, setMonth] = useState<string>(currentMonth());
 
   const visibleAccs = useMemo(
     () => visibleAccounts(currentUserId, accounts),
@@ -151,8 +151,10 @@ export default function Stats() {
 
       <h2 style={{ margin: '0 0 16px' }}>📊 통계</h2>
 
+      <MonthNavigator month={month} onChange={setMonth} />
+
       {/* 요약 카드 */}
-      <div className="section-title">이번 달 ({month})</div>
+      <div className="section-title">월별 요약</div>
       <div className="stat-grid">
         <StatCard label="총 수입" value={formatKRW(thisMonth.income)} color={COLOR.accent} />
         <StatCard label="총 지출" value={formatKRW(thisMonth.expense)} color={COLOR.danger} />
@@ -227,7 +229,7 @@ export default function Stats() {
       </div>
 
       {/* 카테고리별 지출 — 도넛 */}
-      <div className="section-title">이번 달 카테고리별 지출</div>
+      <div className="section-title">카테고리별 지출</div>
       <div className="card">
         {categoryData.length === 0 ? (
           <div className="empty">지출 데이터가 없어요.</div>
@@ -283,7 +285,7 @@ export default function Stats() {
       </div>
 
       {/* 결제 수단별 지출 막대 */}
-      <div className="section-title">이번 달 결제 수단별 지출</div>
+      <div className="section-title">결제 수단별 지출</div>
       <div className="card">
         {byAccountType.length === 0 ? (
           <div className="empty">거래가 없어요.</div>
