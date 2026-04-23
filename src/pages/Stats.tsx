@@ -1,14 +1,52 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { useStore } from '../store';
 import { visibleAccounts } from '../utils/selectors';
 import { addMonths, currentMonth, formatCompact, formatKRW } from '../utils/format';
 
 type MonthRow = {
   month: string;
-  income: number;   // 양수 거래 합
-  expense: number;  // 음수 거래 절댓값 합
+  label: string;
+  income: number;
+  expense: number;
+  net: number;
 };
+
+const COLOR = {
+  accent: '#2e7d5f',
+  danger: '#dc2626',
+  blue: '#2563eb',
+  warn: '#d97706',
+  purple: '#7c3aed',
+  muted: '#73726d',
+};
+const PIE_COLORS = [
+  '#2e7d5f',
+  '#2563eb',
+  '#d97706',
+  '#dc2626',
+  '#7c3aed',
+  '#0891b2',
+  '#db2777',
+  '#65a30d',
+  '#ca8a04',
+  '#9333ea',
+];
 
 export default function Stats() {
   const navigate = useNavigate();
@@ -30,7 +68,7 @@ export default function Stats() {
     [transactions, visibleIds],
   );
 
-  // 최근 N개월 수입/지출
+  // 최근 N개월 수입/지출/순익
   const monthly: MonthRow[] = useMemo(() => {
     const rows: MonthRow[] = [];
     for (let i = range - 1; i >= 0; i--) {
@@ -38,15 +76,20 @@ export default function Stats() {
       const txs = myTxs.filter((t) => t.date.startsWith(m));
       const income = txs.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0);
       const expense = txs.filter((t) => t.amount < 0).reduce((s, t) => s - t.amount, 0);
-      rows.push({ month: m, income, expense });
+      rows.push({
+        month: m,
+        label: m.slice(5) + '월',
+        income,
+        expense,
+        net: income - expense,
+      });
     }
     return rows;
   }, [myTxs, month, range]);
 
   const thisMonth = monthly[monthly.length - 1];
-  const net = thisMonth.income - thisMonth.expense;
-  const savingsRate =
-    thisMonth.income > 0 ? (net / thisMonth.income) * 100 : 0;
+  const net = thisMonth.net;
+  const savingsRate = thisMonth.income > 0 ? (net / thisMonth.income) * 100 : 0;
 
   // 이번 달 카테고리별 지출
   const categoryData = useMemo(() => {
@@ -63,7 +106,9 @@ export default function Stats() {
       .sort((a, b) => b.amount - a.amount);
   }, [myTxs, month]);
 
-  // 계좌 종류(type)별 지출/수입
+  const totalExpense = categoryData.reduce((s, d) => s + d.amount, 0);
+
+  // 결제 수단(type)별 지출
   const byAccountType = useMemo(() => {
     const m: Record<string, { income: number; expense: number }> = {};
     const thisMonthTxs = myTxs.filter((t) => t.date.startsWith(month));
@@ -77,7 +122,7 @@ export default function Stats() {
     return Object.entries(m).map(([type, v]) => ({ type, ...v }));
   }, [myTxs, accounts, month]);
 
-  // 목표 진행률 요약
+  // 목표
   const activeGoals = goals.filter((g) => (g.status ?? '진행중') === '진행중');
 
   return (
@@ -106,108 +151,174 @@ export default function Stats() {
 
       <h2 style={{ margin: '0 0 16px' }}>📊 통계</h2>
 
-      {/* 이번 달 요약 */}
+      {/* 요약 카드 */}
       <div className="section-title">이번 달 ({month})</div>
       <div className="stat-grid">
-        <div className="stat-card">
-          <div className="stat-label">총 수입</div>
-          <div className="stat-value" style={{ color: 'var(--accent)' }}>
-            {formatKRW(thisMonth.income)}
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">총 지출</div>
-          <div className="stat-value" style={{ color: 'var(--danger)' }}>
-            {formatKRW(thisMonth.expense)}
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">순이익</div>
-          <div
-            className="stat-value"
-            style={{ color: net >= 0 ? 'var(--accent)' : 'var(--danger)' }}
-          >
-            {net >= 0 ? '+' : ''}
-            {formatKRW(net)}
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">저축률</div>
-          <div
-            className="stat-value"
-            style={{
-              color:
-                savingsRate >= 30
-                  ? 'var(--accent)'
-                  : savingsRate >= 0
-                    ? 'var(--warn)'
-                    : 'var(--danger)',
-            }}
-          >
-            {savingsRate.toFixed(1)}%
-          </div>
-        </div>
+        <StatCard label="총 수입" value={formatKRW(thisMonth.income)} color={COLOR.accent} />
+        <StatCard label="총 지출" value={formatKRW(thisMonth.expense)} color={COLOR.danger} />
+        <StatCard
+          label="순이익"
+          value={`${net >= 0 ? '+' : ''}${formatKRW(net)}`}
+          color={net >= 0 ? COLOR.accent : COLOR.danger}
+        />
+        <StatCard
+          label="저축률"
+          value={`${savingsRate.toFixed(1)}%`}
+          color={savingsRate >= 30 ? COLOR.accent : savingsRate >= 0 ? COLOR.warn : COLOR.danger}
+        />
       </div>
 
-      {/* 월별 수입/지출 */}
+      {/* 월별 수입 vs 지출 */}
       <div className="section-title">최근 {range}개월 수입 vs 지출</div>
       <div className="card">
-        <MonthlyBarChart data={monthly} />
-        <div className="row" style={{ gap: 12, marginTop: 8, fontSize: 12 }}>
-          <span>
-            <span className="legend-dot" style={{ background: 'var(--accent)' }} />
-            수입
-          </span>
-          <span>
-            <span className="legend-dot" style={{ background: 'var(--danger)' }} />
-            지출
-          </span>
+        <div className="chart-box">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={monthly} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="label" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+              <YAxis
+                tickFormatter={(v) => formatCompact(Number(v))}
+                tick={{ fill: 'var(--text-faint)', fontSize: 10 }}
+                width={55}
+              />
+              <Tooltip
+                formatter={(v) => formatKRW(Number(v))}
+                contentStyle={tooltipStyle}
+                labelStyle={{ color: 'var(--text)', fontWeight: 600 }}
+              />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Bar dataKey="income" name="수입" fill={COLOR.accent} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="expense" name="지출" fill={COLOR.danger} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
-      {/* 카테고리별 지출 */}
+      {/* 순이익 추이 */}
+      <div className="section-title">순이익 추이</div>
+      <div className="card">
+        <div className="chart-box" style={{ height: 200 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={monthly} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="label" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+              <YAxis
+                tickFormatter={(v) => formatCompact(Number(v))}
+                tick={{ fill: 'var(--text-faint)', fontSize: 10 }}
+                width={55}
+              />
+              <Tooltip
+                formatter={(v) => formatKRW(Number(v))}
+                contentStyle={tooltipStyle}
+                labelStyle={{ color: 'var(--text)', fontWeight: 600 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="net"
+                name="순이익"
+                stroke={COLOR.blue}
+                strokeWidth={2.5}
+                dot={{ fill: COLOR.blue, r: 4 }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* 카테고리별 지출 — 도넛 */}
       <div className="section-title">이번 달 카테고리별 지출</div>
       <div className="card">
         {categoryData.length === 0 ? (
           <div className="empty">지출 데이터가 없어요.</div>
         ) : (
-          <CategoryBars data={categoryData} />
+          <>
+            <div className="chart-box" style={{ height: 280 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    dataKey="amount"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius="55%"
+                    outerRadius="85%"
+                    paddingAngle={2}
+                  >
+                    {categoryData.map((_, idx) => (
+                      <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(v, name) => {
+                      const n = Number(v);
+                      return [
+                        `${formatKRW(n)} (${((n / totalExpense) * 100).toFixed(1)}%)`,
+                        String(name),
+                      ];
+                    }}
+                    contentStyle={tooltipStyle}
+                  />
+                  <Legend
+                    wrapperStyle={{ fontSize: 12 }}
+                    iconType="circle"
+                    verticalAlign="bottom"
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                color: 'var(--text-muted)',
+                marginTop: 8,
+                textAlign: 'center',
+              }}
+            >
+              총 지출 <strong style={{ color: 'var(--text)' }}>{formatKRW(totalExpense)}</strong>
+            </div>
+          </>
         )}
       </div>
 
-      {/* 결제 수단별 */}
-      <div className="section-title">이번 달 결제 수단별</div>
+      {/* 결제 수단별 지출 막대 */}
+      <div className="section-title">이번 달 결제 수단별 지출</div>
       <div className="card">
         {byAccountType.length === 0 ? (
           <div className="empty">거래가 없어요.</div>
         ) : (
-          <div className="stack" style={{ gap: 10 }}>
-            {byAccountType.map((r) => (
-              <div key={r.type}>
-                <div
-                  className="row between"
-                  style={{ fontSize: 13, marginBottom: 4 }}
-                >
-                  <span>{r.type}</span>
-                  <span style={{ color: 'var(--text-muted)' }}>
-                    수입 +{formatCompact(r.income)} / 지출 -{formatCompact(r.expense)}
-                  </span>
-                </div>
-                <div className="progress" style={{ height: 6 }}>
-                  <div
-                    className="fill blue"
-                    style={{
-                      width: `${r.expense === 0 ? 0 : Math.min((r.expense / (byAccountType[0].expense || 1)) * 100, 100)}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
+          <div className="chart-box" style={{ height: Math.max(160, byAccountType.length * 48) }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={byAccountType}
+                layout="vertical"
+                margin={{ top: 6, right: 10, left: 10, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis
+                  type="number"
+                  tickFormatter={(v) => formatCompact(Number(v))}
+                  tick={{ fill: 'var(--text-faint)', fontSize: 10 }}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="type"
+                  tick={{ fill: 'var(--text-muted)', fontSize: 12 }}
+                  width={70}
+                />
+                <Tooltip
+                  formatter={(v) => formatKRW(Number(v))}
+                  contentStyle={tooltipStyle}
+                />
+                <Bar dataKey="expense" name="지출" fill={COLOR.danger} radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         )}
       </div>
 
-      {/* 진행 중 목표 */}
+      {/* 진행 중 목표 진행률 */}
       {activeGoals.length > 0 && (
         <>
           <div className="section-title">진행 중 목표</div>
@@ -230,18 +341,19 @@ export default function Stats() {
                 const ratio =
                   target === start
                     ? 1
-                    : Math.max(
-                        0,
-                        Math.min(1, (current - start) / (target - start)),
-                      );
+                    : Math.max(0, Math.min(1, (current - start) / (target - start)));
                 return (
                   <div key={g.id}>
-                    <div className="row between" style={{ fontSize: 13, marginBottom: 4 }}>
+                    <div
+                      className="row between"
+                      style={{ fontSize: 13, marginBottom: 4 }}
+                    >
                       <span>
                         {g.emoji ?? '🎯'} {g.name}
                       </span>
                       <span style={{ color: 'var(--text-muted)' }}>
-                        {formatCompact(current)} / {formatCompact(target)} ({(ratio * 100).toFixed(0)}%)
+                        {formatCompact(current)} / {formatCompact(target)} ({(ratio * 100).toFixed(0)}
+                        %)
                       </span>
                     </div>
                     <div className="progress">
@@ -261,157 +373,21 @@ export default function Stats() {
   );
 }
 
-// ─────────────────────────────────────
-// 월별 수입/지출 그룹 막대 (SVG)
-// ─────────────────────────────────────
-function MonthlyBarChart({ data }: { data: MonthRow[] }) {
-  const width = 720;
-  const height = 220;
-  const pad = { top: 14, right: 14, bottom: 28, left: 48 };
-  const cw = width - pad.left - pad.right;
-  const ch = height - pad.top - pad.bottom;
-
-  const maxVal = Math.max(1, ...data.flatMap((d) => [d.income, d.expense]));
-  // 상단이 딱 맞지 않도록 여유
-  const niceMax = niceCeil(maxVal);
-
-  const groupW = cw / data.length;
-  const barW = Math.max(4, Math.min(26, (groupW - 8) / 2));
-
-  const yFor = (v: number) => pad.top + ch - (v / niceMax) * ch;
-
-  const yTicks = [0, 0.25, 0.5, 0.75, 1];
-
+function StatCard({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      style={{ width: '100%', height: 'auto', maxHeight: 280 }}
-      preserveAspectRatio="xMidYMid meet"
-    >
-      {/* 격자 */}
-      {yTicks.map((t) => (
-        <line
-          key={t}
-          x1={pad.left}
-          x2={width - pad.right}
-          y1={pad.top + ch * (1 - t)}
-          y2={pad.top + ch * (1 - t)}
-          stroke="var(--border)"
-          strokeDasharray={t === 0 ? '' : '2 2'}
-        />
-      ))}
-      {/* Y축 라벨 */}
-      {yTicks.map((t) => (
-        <text
-          key={`y-${t}`}
-          x={pad.left - 6}
-          y={pad.top + ch * (1 - t) + 3}
-          textAnchor="end"
-          fontSize="10"
-          fill="var(--text-faint)"
-        >
-          {formatCompact(niceMax * t)}
-        </text>
-      ))}
-      {/* 막대 */}
-      {data.map((d, i) => {
-        const gx = pad.left + i * groupW + groupW / 2;
-        const incomeH = (d.income / niceMax) * ch;
-        const expenseH = (d.expense / niceMax) * ch;
-        const x1 = gx - barW - 2;
-        const x2 = gx + 2;
-        return (
-          <g key={d.month}>
-            <rect
-              x={x1}
-              y={yFor(d.income)}
-              width={barW}
-              height={incomeH}
-              fill="var(--accent)"
-              rx={2}
-            >
-              <title>
-                {d.month} 수입 {formatKRW(d.income)}
-              </title>
-            </rect>
-            <rect
-              x={x2}
-              y={yFor(d.expense)}
-              width={barW}
-              height={expenseH}
-              fill="var(--danger)"
-              rx={2}
-            >
-              <title>
-                {d.month} 지출 {formatKRW(d.expense)}
-              </title>
-            </rect>
-            <text
-              x={gx}
-              y={height - 10}
-              textAnchor="middle"
-              fontSize="11"
-              fill="var(--text-muted)"
-            >
-              {d.month.slice(5)}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
+    <div className="stat-card">
+      <div className="stat-label">{label}</div>
+      <div className="stat-value" style={{ color }}>
+        {value}
+      </div>
+    </div>
   );
 }
 
-// ─────────────────────────────────────
-// 카테고리별 가로 막대
-// ─────────────────────────────────────
-function CategoryBars({ data }: { data: { name: string; amount: number }[] }) {
-  const total = data.reduce((s, d) => s + d.amount, 0);
-  const max = data[0].amount;
-  return (
-    <>
-      <div className="stack" style={{ gap: 10 }}>
-        {data.map((d) => {
-          const share = (d.amount / total) * 100;
-          const bar = (d.amount / max) * 100;
-          return (
-            <div key={d.name}>
-              <div
-                className="row between"
-                style={{ fontSize: 13, marginBottom: 4 }}
-              >
-                <span>{d.name}</span>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  {formatKRW(d.amount)} · {share.toFixed(1)}%
-                </span>
-              </div>
-              <div className="progress">
-                <div className="fill" style={{ width: `${bar}%` }} />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div
-        style={{
-          fontSize: 12,
-          color: 'var(--text-muted)',
-          marginTop: 12,
-          borderTop: '1px solid var(--border)',
-          paddingTop: 8,
-        }}
-      >
-        총 지출 {formatKRW(total)}
-      </div>
-    </>
-  );
-}
-
-// Y축 상단값을 "깔끔한 숫자"로 반올림
-function niceCeil(v: number): number {
-  if (v <= 0) return 1;
-  const pow = Math.pow(10, Math.floor(Math.log10(v)));
-  const base = v / pow;
-  const nice = base <= 1 ? 1 : base <= 2 ? 2 : base <= 5 ? 5 : 10;
-  return nice * pow;
-}
+const tooltipStyle: React.CSSProperties = {
+  background: 'var(--bg-card)',
+  border: '1px solid var(--border)',
+  borderRadius: 6,
+  fontSize: 12,
+  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+};

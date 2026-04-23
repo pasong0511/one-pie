@@ -605,6 +605,23 @@ hr {
   vertical-align: middle;
 }
 
+.chart-box {
+  width: 100%;
+  height: 260px;
+}
+@media (max-width: 480px) {
+  .chart-box {
+    height: 220px;
+  }
+}
+.recharts-default-tooltip {
+  border-radius: 6px !important;
+}
+.recharts-cartesian-axis-tick text,
+.recharts-legend-item-text {
+  fill: var(--text-muted);
+}
+
 .fab-tx {
   position: fixed;
   right: 24px;

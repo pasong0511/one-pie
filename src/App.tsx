@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { useStore } from './store';
 import Login from './pages/Login';
@@ -6,9 +7,11 @@ import AccountDetail from './pages/AccountDetail';
 import GoalDetail from './pages/GoalDetail';
 import WhatIf from './pages/WhatIf';
 import Settings from './pages/Settings';
-import Stats from './pages/Stats';
 import LowBalanceToast from './components/LowBalanceToast';
 import GlobalTxButton from './components/GlobalTxButton';
+
+// Stats는 recharts를 쓰므로 lazy-load (초기 번들에서 제외 → 모바일 초기 로딩 빠르게)
+const Stats = lazy(() => import('./pages/Stats'));
 
 export default function App() {
   const currentUserId = useStore((s) => s.currentUserId);
@@ -65,7 +68,14 @@ export default function App() {
         <Route path="/account/:id" element={<AccountDetail />} />
         <Route path="/goal/:id" element={<GoalDetail />} />
         <Route path="/what-if" element={<WhatIf />} />
-        <Route path="/stats" element={<Stats />} />
+        <Route
+          path="/stats"
+          element={
+            <Suspense fallback={<div className="empty">통계 불러오는 중…</div>}>
+              <Stats />
+            </Suspense>
+          }
+        />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
