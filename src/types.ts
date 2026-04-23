@@ -54,7 +54,8 @@ export type Account = {
   sharedWith: string[];
   editPolicy: EditPolicy;
   categories: string[];
-  budgetAllocations: Record<string, Record<string, number>>; // { [month]: { [category]: allocated } }
+  budgetAllocations: Record<string, Record<string, number>>; // { [month]: { [category]: allocated } } — 카테고리별 세부 배정
+  monthlyBudget?: Record<string, number>;                    // { [month]: 총예산 } — 차감형 계좌의 월 총 예산. 카테고리 배정합과 별개로 "덩어리 예산" 지정.
   settlementReminder?: { dayOfMonth: number; enabled: boolean };
   lowBalanceAlert?: LowBalanceAlert;  // 차감형 전용. 미설정이면 알림 없음
   createdAt: string;

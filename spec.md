@@ -740,7 +740,10 @@ type Goal = {
     - 이 전환 시에도 UI(CategoryChips/CategoryManagerModal)는 재사용 — store 액션(`addCategory` 등)만 풀 기반으로 교체하면 됨.
     - TransactionModal/PropertyPanel은 `account.categories` 하나만 읽으므로, 향후 selector로 감싸 대체 가능.
 - **D15. 차감형 계좌 예산 모델 — "초기배정 + 추경"**
-  - **초기배정(initialAllocated)**: 사용자가 월초에 `budgetAllocations[month]`로 설정한 카테고리별 배정 합계 (계획분).
+  - **초기배정(initialAllocated)**: 다음 중 큰 값.
+    - `Account.monthlyBudget[month]` — 사용자가 PropertyPanel에서 직접 입력한 "이번달 총 예산" (덩어리 예산, 카테고리 없이 총액만 잡을 때 유용).
+    - `sum(budgetAllocations[month])` — 카테고리별 배정 합계 (계획분).
+  - 둘 다 있으면 **max**(총 예산 vs 카테고리 합). 카테고리만 있고 총액은 빈 경우 → 카테고리 합. 총액만 있고 카테고리 없음 → 총액. 둘 다 비어있으면 0.
   - **추경(supplemented)**: 이번 달 거래 중 **`isSupplement === true` 로 체크된 입금만** 합산. 명시적으로 "예산에 넣는다"고 표시한 입금.
   - **일반 입금(regularInflow)**: `isSupplement` 플래그 없는 양수 거래(이자/월급/부수입 기록용). **예산에 반영되지 않고** 기록만 남음.
   - **총 예산(allocated)** = initialAllocated + supplemented.

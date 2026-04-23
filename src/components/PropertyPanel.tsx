@@ -62,6 +62,9 @@ export default function PropertyPanel({
   const [allocs, setAllocs] = useState<Record<string, number>>(
     account?.budgetAllocations[month] ?? {},
   );
+  const [monthlyBudget, setMonthlyBudget] = useState<number>(
+    account?.monthlyBudget?.[month] ?? 0,
+  );
   const [catManagerOpen, setCatManagerOpen] = useState(false);
 
   // account.categories가 외부(모달)에서 변경되면 allocs 키도 동기화
@@ -104,6 +107,16 @@ export default function PropertyPanel({
             notify: alertNotify,
           }
         : undefined,
+      monthlyBudget:
+        mode === '차감형' && monthlyBudget > 0
+          ? { ...(account.monthlyBudget ?? {}), [month]: monthlyBudget }
+          : (() => {
+              // 차감형 아님 or 0 입력 → 해당 월만 제거
+              if (!account.monthlyBudget) return undefined;
+              const next = { ...account.monthlyBudget };
+              delete next[month];
+              return Object.keys(next).length > 0 ? next : undefined;
+            })(),
     });
     // sync goal's linkedAccountIds
     if (goalId) {
@@ -283,6 +296,27 @@ export default function PropertyPanel({
               ))}
             </select>
           </label>
+
+          {mode === '차감형' && (
+            <label className="field">
+              <span className="label-text">이번달({month}) 예산</span>
+              <div className="row">
+                <input
+                  type="number"
+                  value={monthlyBudget || ''}
+                  placeholder="예: 500000"
+                  onChange={(e) => setMonthlyBudget(Number(e.target.value) || 0)}
+                  style={{ flex: 1 }}
+                />
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>원</span>
+              </div>
+              <div className="hint">
+                이 계좌의 이번달 총 예산. 카테고리 배정합(
+                {formatKRW(Object.values(allocs).reduce((s, v) => s + v, 0))})
+                과 별개로 "덩어리 예산"을 지정. 비워두면 카테고리 합이 초기배정이 됩니다.
+              </div>
+            </label>
+          )}
 
           <label className="field">
             <div className="cat-field-header">

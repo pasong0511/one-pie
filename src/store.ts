@@ -303,7 +303,11 @@ export function remainingBudget(
       remaining: 0,
     };
   const allocs = account.budgetAllocations[month] ?? {};
-  const initialAllocated = Object.values(allocs).reduce((s, v) => s + v, 0);
+  const categorySum = Object.values(allocs).reduce((s, v) => s + v, 0);
+  const monthlyTotal = account.monthlyBudget?.[month];
+  // 총 예산이 명시되어 있으면 그 값을, 없으면 카테고리 합을 초기배정으로 사용
+  const initialAllocated =
+    monthlyTotal !== undefined ? Math.max(monthlyTotal, categorySum) : categorySum;
   const spent = sumSpentInMonth(accountId, month, undefined, transactions);
   const monthTxs = transactions.filter(
     (t) => t.accountId === accountId && t.date.startsWith(month) && t.amount > 0,
