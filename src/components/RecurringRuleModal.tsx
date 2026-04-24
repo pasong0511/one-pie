@@ -5,6 +5,7 @@ import { canWrite, visibleAccounts } from '../utils/selectors';
 import { todayISO } from '../utils/format';
 import { formatCategoryPath } from '../utils/category';
 import CategoryPickerModal from './CategoryPickerModal';
+import NumericInput from './NumericInput';
 
 const INTERVAL_ORDER: RecurringInterval[] = [
   'daily',
@@ -183,10 +184,10 @@ export default function RecurringRuleModal({
 
           <label className="field">
             <span className="label-text">금액</span>
-            <input
-              type="number"
-              value={amount || ''}
-              onChange={(e) => setAmount(Number(e.target.value))}
+            <NumericInput
+              value={amount}
+              allowNegative={false}
+              onChange={setAmount}
             />
           </label>
 

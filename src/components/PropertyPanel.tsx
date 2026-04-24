@@ -13,6 +13,7 @@ import { addMonths, formatKRW, currentMonth } from '../utils/format';
 import { uid } from '../utils/id';
 import CategoryChips from './CategoryChips';
 import CategoryManagerModal from './CategoryManagerModal';
+import NumericInput from './NumericInput';
 
 export default function PropertyPanel({
   accountId,
@@ -328,11 +329,11 @@ export default function PropertyPanel({
                   )}
                 </div>
                 <div className="row">
-                  <input
-                    type="number"
-                    value={monthlyBudget || ''}
-                    placeholder="예: 500000"
-                    onChange={(e) => setMonthlyBudget(Number(e.target.value) || 0)}
+                  <NumericInput
+                    value={monthlyBudget}
+                    allowNegative={false}
+                    placeholder="예: 500,000"
+                    onChange={setMonthlyBudget}
                     style={{ flex: 1 }}
                   />
                   <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>원</span>
@@ -378,15 +379,14 @@ export default function PropertyPanel({
                   {account.categories.map((c) => (
                     <div key={c} className="row">
                       <span style={{ flex: 1, fontSize: 13 }}>· {c}</span>
-                      <input
-                        type="number"
+                      <NumericInput
+                        value={allocs[c] || 0}
+                        allowNegative={false}
                         style={{ width: 160 }}
-                        placeholder="0"
-                        value={allocs[c] || ''}
-                        onChange={(e) =>
+                        onChange={(v) =>
                           setAllocs((cur) => ({
                             ...cur,
-                            [c]: Number(e.target.value) || 0,
+                            [c]: v,
                           }))
                         }
                       />
@@ -443,12 +443,12 @@ export default function PropertyPanel({
                     onChange={(e) => setNewDay(Number(e.target.value))}
                   />
                   <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>일</span>
-                  <input
-                    type="number"
+                  <NumericInput
+                    value={newAmt}
+                    allowNegative={false}
                     style={{ width: 140 }}
-                    value={newAmt || ''}
                     placeholder="금액"
-                    onChange={(e) => setNewAmt(Number(e.target.value))}
+                    onChange={setNewAmt}
                   />
                   <input
                     style={{ width: 120 }}
@@ -521,12 +521,12 @@ export default function PropertyPanel({
               <span className="label-text">🔔 잔액 임계 알림</span>
               <div className="row" style={{ flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>금액 ≤</span>
-                <input
-                  type="number"
+                <NumericInput
+                  value={alertAmount}
+                  allowNegative={false}
                   style={{ width: 140 }}
-                  value={alertAmount || ''}
                   placeholder="미설정"
-                  onChange={(e) => setAlertAmount(Number(e.target.value) || 0)}
+                  onChange={setAlertAmount}
                 />
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>원</span>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8 }}>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store';
 import { GoalMode, GoalStatus } from '../types';
 import { formatKRW, currentMonth, addMonths, monthDiff } from '../utils/format';
+import NumericInput from './NumericInput';
 
 export default function GoalEditor({
   goalId,
@@ -173,11 +174,10 @@ export default function GoalEditor({
               <span className="label-text">
                 {mode === '누적형' ? '시작 금액 (현재 보유 · 기본 0)' : '시작 금액 (줄여야 할 값)'}
               </span>
-              <input
-                type="number"
-                value={startAmount || ''}
-                onChange={(e) => setStartAmount(Number(e.target.value))}
-                placeholder="0"
+              <NumericInput
+                value={startAmount}
+                allowNegative={false}
+                onChange={setStartAmount}
               />
               {startAmount > 0 && <div className="hint">{formatKRW(startAmount)}</div>}
             </label>
@@ -185,11 +185,10 @@ export default function GoalEditor({
               <span className="label-text">
                 {mode === '누적형' ? '목표 금액 (도달 상한)' : '목표 금액 (도달 하한, 보통 0)'}
               </span>
-              <input
-                type="number"
-                value={targetAmount || ''}
-                onChange={(e) => setTargetAmount(Number(e.target.value))}
-                placeholder="0"
+              <NumericInput
+                value={targetAmount}
+                allowNegative={false}
+                onChange={setTargetAmount}
               />
               {targetAmount > 0 && <div className="hint">{formatKRW(targetAmount)}</div>}
             </label>

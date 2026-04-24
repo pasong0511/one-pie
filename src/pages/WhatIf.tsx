@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore, accountBalance } from '../store';
 import { canWrite, visibleAccounts, goalProgress } from '../utils/selectors';
 import { formatKRW, todayISO, addMonths, monthDiff } from '../utils/format';
+import NumericInput from '../components/NumericInput';
 
 export default function WhatIf() {
   const navigate = useNavigate();
@@ -76,10 +77,10 @@ export default function WhatIf() {
       <div className="card">
         <label className="field">
           <span className="label-text">금액</span>
-          <input
-            type="number"
+          <NumericInput
             value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
+            allowNegative={false}
+            onChange={setAmount}
             style={{ fontSize: 18 }}
           />
         </label>

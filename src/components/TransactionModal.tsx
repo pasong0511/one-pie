@@ -11,6 +11,7 @@ import { formatKRW, todayISO, monthOf } from '../utils/format';
 import { formatCategoryPath } from '../utils/category';
 import CategoryPickerModal from './CategoryPickerModal';
 import CalculatorModal from './CalculatorModal';
+import NumericInput from './NumericInput';
 
 export default function TransactionModal({
   defaultAccountId,
@@ -249,11 +250,11 @@ export default function TransactionModal({
           <label className="field">
             <span className="label-text">금액</span>
             <div className="amount-row">
-              <input
-                type="number"
-                value={amount || ''}
-                onChange={(e) => {
-                  setAmount(Number(e.target.value));
+              <NumericInput
+                value={amount}
+                allowNegative={false}
+                onChange={(v) => {
+                  setAmount(v);
                   setShowWarn(false);
                 }}
               />
