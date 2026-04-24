@@ -41,6 +41,10 @@ export default function App() {
     [location.search],
   );
 
+  const pathname = location.pathname;
+  const showSwitcher = pathname === '/' || pathname === '/accounts';
+  const pageTitle = !showSwitcher ? getPageTitle(pathname) : null;
+
   if (!currentUserId || hasInvite) {
     return (
       <div className="app">
@@ -54,7 +58,11 @@ export default function App() {
   return (
     <div className="app">
       <div className="topbar">
-        <AccountSwitcher />
+        {showSwitcher ? (
+          <AccountSwitcher />
+        ) : (
+          <h1 className="topbar-title">{pageTitle ?? ''}</h1>
+        )}
         <div className="topbar-right">
           <button
             type="button"
@@ -114,4 +122,14 @@ export default function App() {
       <BottomNav />
     </div>
   );
+}
+
+function getPageTitle(pathname: string): string | null {
+  if (pathname === '/calendar') return '달력';
+  if (pathname === '/stats') return '통계';
+  if (pathname.startsWith('/settings')) return '설정';
+  if (pathname === '/what-if') return '이 소비 괜찮을까';
+  if (pathname.startsWith('/account/')) return '계좌';
+  if (pathname.startsWith('/goal/')) return '목표';
+  return null;
 }

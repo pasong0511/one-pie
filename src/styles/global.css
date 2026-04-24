@@ -161,6 +161,14 @@ a {
   align-items: center;
   gap: 6px;
 }
+.topbar-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-strong);
+  padding: 6px 4px;
+}
 .topbar-icon-btn {
   display: inline-flex;
   align-items: center;

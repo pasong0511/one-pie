@@ -74,8 +74,6 @@ export default function Calendar() {
 
   return (
     <div>
-      <h2 style={{ margin: '0 0 12px' }}>📅 달력</h2>
-
       {/* 상단: 달력 */}
       <div className="card cal-card">
         <div className="cal-header">

@@ -149,8 +149,6 @@ export default function Stats() {
         </div>
       </div>
 
-      <h2 style={{ margin: '0 0 16px' }}>📊 통계</h2>
-
       <MonthNavigator month={month} onChange={setMonth} />
 
       {/* 요약 카드 */}

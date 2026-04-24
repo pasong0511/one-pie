@@ -68,11 +68,6 @@ export default function Settings() {
 
   return (
     <div>
-      <button className="ghost" onClick={() => navigate('/')} style={{ marginBottom: 8 }}>
-        ← 대시보드
-      </button>
-      <h2 style={{ margin: '0 0 16px' }}>⚙ 설정</h2>
-
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="row">
           <div style={{ fontSize: 32 }}>{me.emoji}</div>
