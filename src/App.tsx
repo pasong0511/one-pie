@@ -17,6 +17,7 @@ import Calendar from './pages/Calendar';
 import LowBalanceToast from './components/LowBalanceToast';
 import GlobalTxButton from './components/GlobalTxButton';
 import BottomNav from './components/BottomNav';
+import AccountSwitcher from './components/AccountSwitcher';
 
 // Stats는 recharts를 쓰므로 lazy-load (초기 번들에서 제외 → 모바일 초기 로딩 빠르게)
 const Stats = lazy(() => import('./pages/Stats'));
@@ -52,21 +53,33 @@ export default function App() {
   return (
     <div className="app">
       <div className="topbar">
-        <div className="brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-          <a>🥧 one-pie</a>
+        <AccountSwitcher />
+        <div className="topbar-right">
+          <button
+            type="button"
+            className="topbar-icon-btn"
+            onClick={() => alert('알림이 없어요.')}
+            title="알림"
+            aria-label="알림"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <path d="M10 21a2 2 0 004 0" />
+            </svg>
+          </button>
+          <button
+            className="user-chip"
+            onClick={() => {
+              setCurrentUser(null);
+              navigate('/');
+            }}
+            title="사용자 전환"
+          >
+            <span>{currentUser?.emoji ?? '👤'}</span>
+            <span>{currentUser?.name ?? ''}</span>
+            <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>전환 ▾</span>
+          </button>
         </div>
-        <button
-          className="user-chip"
-          onClick={() => {
-            setCurrentUser(null);
-            navigate('/');
-          }}
-          title="사용자 전환"
-        >
-          <span>{currentUser?.emoji ?? '👤'}</span>
-          <span>{currentUser?.name ?? ''}</span>
-          <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>전환 ▾</span>
-        </button>
       </div>
 
       <LowBalanceToast />
