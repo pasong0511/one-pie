@@ -217,7 +217,7 @@ export default function AccountDetail() {
             className="primary"
             onClick={() => setTxOpen({})}
           >
-            + 거래 기록
+            + 거래
           </button>
         </div>
       )}

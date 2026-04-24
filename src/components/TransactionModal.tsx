@@ -161,7 +161,7 @@ export default function TransactionModal({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>{isEdit ? '거래 수정' : '거래 기록'}</h3>
+          <h3>{isEdit ? '거래 수정' : '거래 추가'}</h3>
           <button className="ghost" onClick={onClose}>
             ✕
           </button>

@@ -4,7 +4,6 @@ import { visibleAccounts, visibleGoals, goalProgress } from '../utils/selectors'
 import { formatKRW, currentMonth } from '../utils/format';
 import { Account, ACCOUNT_TYPE_META } from '../types';
 import { useState } from 'react';
-import GoalEditor from '../components/GoalEditor';
 import WhatIfButton from '../components/WhatIfButton';
 import MonthNavigator from '../components/MonthNavigator';
 
@@ -15,7 +14,6 @@ export default function Dashboard() {
   const transactions = useStore((s) => s.transactions);
   const goals = useStore((s) => s.goals);
   const users = useStore((s) => s.users);
-  const [goalOpen, setGoalOpen] = useState<{ id?: string } | null>(null);
   const [goalFilter, setGoalFilter] = useState<'all' | 'private' | 'family'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | '진행중' | '완료' | '실패'>('all');
   const [month, setMonth] = useState<string>(currentMonth());
@@ -43,12 +41,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="section-title">
-        목표
-        <button className="ghost" onClick={() => setGoalOpen({})}>
-          + 새 목표
-        </button>
-      </div>
+      <div className="section-title">목표</div>
       {allMyGoals.length > 0 && (
         <div
           className="row"
@@ -114,7 +107,7 @@ export default function Dashboard() {
       )}
       {allMyGoals.length === 0 && (
         <div className="empty">
-          아직 목표가 없어요. [+ 새 목표]로 만들어보세요.
+          아직 목표가 없어요. 설정 → 목표에서 만들어보세요.
         </div>
       )}
       {allMyGoals.length > 0 && myGoals.length === 0 && (
@@ -226,12 +219,7 @@ export default function Dashboard() {
         </>
       )}
 
-      <div className="section-title" style={{ marginTop: 32 }}>
-        계좌
-        <button className="ghost" onClick={() => navigate('/settings')}>
-          + 새 계좌
-        </button>
-      </div>
+      <div className="section-title" style={{ marginTop: 32 }}>계좌</div>
       <MonthNavigator month={month} onChange={setMonth} />
       <div
         style={{
@@ -284,10 +272,6 @@ export default function Dashboard() {
       <div style={{ display: 'flex', gap: 8, marginTop: 24 }}>
         <WhatIfButton />
       </div>
-
-      {goalOpen && (
-        <GoalEditor goalId={goalOpen.id} onClose={() => setGoalOpen(null)} />
-      )}
     </div>
   );
 }

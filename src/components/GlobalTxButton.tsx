@@ -22,8 +22,8 @@ export default function GlobalTxButton() {
       <button
         className="fab-tx"
         onClick={() => !disabled && setOpen(true)}
-        title={disabled ? '쓰기 가능한 계좌가 없어요' : '거래 기록'}
-        aria-label="거래 기록 추가"
+        title={disabled ? '쓰기 가능한 계좌가 없어요' : '거래 추가'}
+        aria-label="거래 추가"
         disabled={disabled}
       >
         <span className="fab-tx-plus">＋</span>
