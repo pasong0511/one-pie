@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { useStore } from './store';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Accounts from './pages/Accounts';
 import AccountDetail from './pages/AccountDetail';
 import GoalDetail from './pages/GoalDetail';
 import WhatIf from './pages/WhatIf';
@@ -86,6 +87,7 @@ export default function App() {
 
       <Routes>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/accounts" element={<Accounts />} />
         <Route path="/account/:id" element={<AccountDetail />} />
         <Route path="/goal/:id" element={<GoalDetail />} />
         <Route path="/calendar" element={<Calendar />} />

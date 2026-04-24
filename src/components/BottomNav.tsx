@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
 
-type IconName = 'home' | 'cal' | 'chart' | 'settings';
+type IconName = 'home' | 'wallet' | 'cal' | 'chart' | 'settings';
 
 // 모바일 하단 고정 탭바. Toss 톤의 라인 아이콘 사용.
 const TABS: { to: string; icon: IconName; label: string; end?: boolean }[] = [
   { to: '/', icon: 'home', label: '홈', end: true },
+  { to: '/accounts', icon: 'wallet', label: '계좌' },
   { to: '/calendar', icon: 'cal', label: '달력' },
   { to: '/stats', icon: 'chart', label: '통계' },
   { to: '/settings', icon: 'settings', label: '설정' },
@@ -24,6 +25,14 @@ function NavIcon({ name }: { name: IconName }) {
       return (
         <svg {...p}>
           <path d="M4 10l8-6 8 6v10a2 2 0 01-2 2h-4v-7h-4v7H6a2 2 0 01-2-2V10z" />
+        </svg>
+      );
+    case 'wallet':
+      return (
+        <svg {...p}>
+          <rect x="3" y="6" width="18" height="14" rx="2" />
+          <path d="M16 12h3" />
+          <path d="M3 10h14a2 2 0 012 2v0a2 2 0 01-2 2H3" />
         </svg>
       );
     case 'cal':
