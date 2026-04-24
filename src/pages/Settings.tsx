@@ -17,6 +17,7 @@ export default function Settings() {
   const goals = useStore((s) => s.goals);
   const recurringRules = useStore((s) => s.recurringRules);
   const familyGroups = useStore((s) => s.familyGroups);
+  const taxonomy = useStore((s) => s.categoryTaxonomy);
 
   const me = users.find((u) => u.id === currentUserId)!;
   const myAccounts = accounts.filter((a) => a.ownerId === currentUserId);
@@ -24,6 +25,8 @@ export default function Settings() {
   const myRules = recurringRules.filter((r) => r.ownerId === currentUserId);
   const myGroup = familyGroups.find((g) => g.id === me?.familyGroupId);
   const memberCount = myGroup?.memberIds?.length ?? 0;
+  const expenseMains = taxonomy.filter((m) => m.kind === 'expense').length;
+  const incomeMains = taxonomy.filter((m) => m.kind === 'income').length;
 
   const items: MenuItem[] = [
     {
@@ -43,6 +46,12 @@ export default function Settings() {
       icon: '🔁',
       label: '반복 거래',
       sublabel: `${myRules.length}개 규칙`,
+    },
+    {
+      to: '/settings/categories',
+      icon: '🏷',
+      label: '카테고리',
+      sublabel: `지출 ${expenseMains} · 수입 ${incomeMains}`,
     },
     {
       to: '/settings/family',

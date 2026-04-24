@@ -12,6 +12,7 @@ import SettingsGoals from './pages/settings/Goals';
 import SettingsRecurring from './pages/settings/Recurring';
 import SettingsFamily from './pages/settings/Family';
 import SettingsDeveloper from './pages/settings/Developer';
+import SettingsCategories from './pages/settings/Categories';
 import Calendar from './pages/Calendar';
 import LowBalanceToast from './components/LowBalanceToast';
 import GlobalTxButton from './components/GlobalTxButton';
@@ -88,6 +89,7 @@ export default function App() {
         <Route path="/settings/accounts" element={<SettingsAccounts />} />
         <Route path="/settings/goals" element={<SettingsGoals />} />
         <Route path="/settings/recurring" element={<SettingsRecurring />} />
+        <Route path="/settings/categories" element={<SettingsCategories />} />
         <Route path="/settings/family" element={<SettingsFamily />} />
         <Route path="/settings/developer" element={<SettingsDeveloper />} />
         <Route path="*" element={<Navigate to="/" replace />} />

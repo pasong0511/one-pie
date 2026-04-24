@@ -3,7 +3,8 @@ import { useStore } from '../store';
 import { RECURRING_INTERVAL_META, RecurringInterval, RecurringRule } from '../types';
 import { canWrite, visibleAccounts } from '../utils/selectors';
 import { todayISO } from '../utils/format';
-import CategoryChips from './CategoryChips';
+import { formatCategoryPath } from '../utils/category';
+import CategoryPickerModal from './CategoryPickerModal';
 
 const INTERVAL_ORDER: RecurringInterval[] = [
   'daily',
@@ -31,6 +32,7 @@ export default function RecurringRuleModal({
   const currentUserId = useStore((s) => s.currentUserId)!;
   const accounts = useStore((s) => s.accounts);
   const rules = useStore((s) => s.recurringRules);
+  const taxonomy = useStore((s) => s.categoryTaxonomy);
   const addRule = useStore((s) => s.addRecurringRule);
   const updateRule = useStore((s) => s.updateRecurringRule);
   const deleteRule = useStore((s) => s.deleteRecurringRule);
@@ -61,8 +63,8 @@ export default function RecurringRuleModal({
   const [isSupplement, setIsSupplement] = useState<boolean>(editing?.isSupplement ?? false);
   const [enabled, setEnabled] = useState<boolean>(editing?.enabled ?? true);
 
-  const categoryOptions = acc?.categories ?? [];
-  const selectedCategory = categoryOptions.includes(category) ? category : '';
+  const selectedCategory = category || '';
+  const [catPickerOpen, setCatPickerOpen] = useState(false);
 
   const validEnd = !endDate || endDate >= startDate;
 
@@ -119,7 +121,10 @@ export default function RecurringRuleModal({
               onChange={(e) => {
                 setAccountId(e.target.value);
                 const a = accounts.find((x) => x.id === e.target.value);
-                if (a && kind === 'expense' && a.mode === '누적형') setKind('deposit');
+                if (a && kind === 'expense' && a.mode === '누적형') {
+                  setKind('deposit');
+                  setCategory('');
+                }
               }}
             >
               {writable.length === 0 && <option value="">쓰기 가능한 계좌 없음</option>}
@@ -138,7 +143,10 @@ export default function RecurringRuleModal({
                 <input
                   type="radio"
                   checked={kind === 'expense'}
-                  onChange={() => setKind('expense')}
+                  onChange={() => {
+                    setKind('expense');
+                    setCategory('');
+                  }}
                 />
                 지출
               </label>
@@ -146,7 +154,10 @@ export default function RecurringRuleModal({
                 <input
                   type="radio"
                   checked={kind === 'deposit'}
-                  onChange={() => setKind('deposit')}
+                  onChange={() => {
+                    setKind('deposit');
+                    setCategory('');
+                  }}
                 />
                 입금
               </label>
@@ -219,12 +230,20 @@ export default function RecurringRuleModal({
 
           <label className="field">
             <span className="label-text">카테고리 (선택)</span>
-            <CategoryChips
-              categories={categoryOptions}
-              selected={selectedCategory}
-              onSelect={setCategory}
-              emptyText="등록된 카테고리 없음 — 계좌 속성에서 추가하세요"
-            />
+            <button
+              type="button"
+              className="cat-picker-trigger"
+              onClick={() => setCatPickerOpen(true)}
+            >
+              {selectedCategory ? (
+                <span className="cat-picker-value">
+                  {formatCategoryPath(taxonomy, selectedCategory)}
+                </span>
+              ) : (
+                <span className="cat-picker-placeholder">+ 카테고리 선택</span>
+              )}
+              <span className="cat-picker-chevron">›</span>
+            </button>
           </label>
 
           {kind === 'deposit' && (
@@ -271,6 +290,14 @@ export default function RecurringRuleModal({
           </button>
         </div>
       </div>
+      {catPickerOpen && (
+        <CategoryPickerModal
+          kind={kind === 'deposit' ? 'income' : 'expense'}
+          value={selectedCategory || undefined}
+          onSelect={setCategory}
+          onClose={() => setCatPickerOpen(false)}
+        />
+      )}
     </div>
   );
 }

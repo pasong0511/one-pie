@@ -695,9 +695,22 @@
             ├→ 내 계좌 (/settings/accounts)
             ├→ 목표 (/settings/goals)
             ├→ 반복 거래 (/settings/recurring)
+            ├→ 카테고리 (/settings/categories)
             ├→ 가족 (/settings/family)
             └→ 개발자 (/settings/developer)
 ```
+
+---
+
+### 7.11 카테고리 택소노미
+
+거래의 `category` 필드에 담기는 값들은 **전역 카테고리 트리**에서 고른 서브 label. 계좌별로 카테고리를 매번 만들지 않아도 되도록 사용자 단위로 공유.
+
+- 구조: `MainCategory[]` — 각 메인은 `kind: 'expense' | 'income'`, `emoji`, `label`, `subs: SubCategory[]`
+- 기본값: `utils/categoryDefaults.ts`의 `DEFAULT_CATEGORY_TAXONOMY` (지출 10 메인 · 수입 7 메인). 신규 가입/초기화/기존 persist 상태에 없을 때 자동 주입.
+- 편집: `/settings/categories` — 카카오톡 스타일 2-pane (지출/수입 탭 → 좌측 메인 리스트 → 우측 서브 리스트). 메인은 emoji+label 편집·삭제, 서브는 label 편집·삭제. `↺ 기본값` 버튼으로 공장 초기화.
+- 거래 모달의 카테고리 필드: 현재 선택된 서브를 칩으로 표시하고, 탭하면 bottom-sheet 피커 오픈 → 지출/수입 탭 → 메인 칩 탭 → 서브 칩 탭 → 자동 반영·닫힘. 피커 상단 `⚙` 아이콘으로 `/settings/categories` 이동.
+- 기존 `Account.categories` + `budgetAllocations`는 계좌별 예산 배정용으로 유지 (별개 개념). 거래의 카테고리 서브 label이 예산 배정 키와 일치하면 잔여 예산 힌트가 표시됨.
 
 ---
 

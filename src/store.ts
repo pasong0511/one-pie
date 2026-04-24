@@ -2,8 +2,10 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
   Account,
+  CategoryKind,
   FamilyGroup,
   Goal,
+  MainCategory,
   RecurringRule,
   SettlementDecision,
   Transaction,
@@ -15,6 +17,7 @@ import { monthOf, currentMonth, todayISO } from './utils/format';
 import { sumSpentInMonth } from './utils/selectors';
 import { InvitePayload } from './utils/invite';
 import { formatLocalDate, occurrencesBetween, parseLocalDate } from './utils/recurring';
+import { DEFAULT_CATEGORY_TAXONOMY } from './utils/categoryDefaults';
 
 type State = {
   currentUserId: string | null;
@@ -24,6 +27,7 @@ type State = {
   goals: Goal[];
   transactions: Transaction[];
   recurringRules: RecurringRule[];
+  categoryTaxonomy: MainCategory[];
   initialized: boolean;
 };
 
@@ -38,6 +42,15 @@ type Actions = {
   addCategory: (accountId: string, name: string) => void;
   renameCategory: (accountId: string, oldName: string, newName: string) => void;
   deleteCategory: (accountId: string, name: string) => void;
+  // 전역 카테고리 택소노미
+  addMainCategory: (kind: CategoryKind, emoji: string, label: string) => MainCategory;
+  updateMainCategory: (id: string, patch: Partial<Pick<MainCategory, 'emoji' | 'label'>>) => void;
+  removeMainCategory: (id: string) => void;
+  reorderMainCategories: (kind: CategoryKind, orderedIds: string[]) => void;
+  addSubCategory: (mainId: string, label: string) => void;
+  updateSubCategory: (mainId: string, subId: string, label: string) => void;
+  removeSubCategory: (mainId: string, subId: string) => void;
+  resetCategoryTaxonomy: () => void;
   addTransaction: (input: Omit<Transaction, 'id'>) => Transaction;
   updateTransaction: (id: string, patch: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
@@ -70,6 +83,7 @@ const emptyState: State = {
   goals: [],
   transactions: [],
   recurringRules: [],
+  categoryTaxonomy: DEFAULT_CATEGORY_TAXONOMY,
   initialized: false,
 };
 
@@ -261,6 +275,82 @@ export const useStore = create<Store>()(
           ),
         })),
 
+      addMainCategory: (kind, emoji, label) => {
+        const main: MainCategory = {
+          id: uid('mcat'),
+          kind,
+          emoji: emoji || '📦',
+          label: label.trim(),
+          subs: [],
+        };
+        set((s) => ({ categoryTaxonomy: [...s.categoryTaxonomy, main] }));
+        return main;
+      },
+
+      updateMainCategory: (id, patch) =>
+        set((s) => ({
+          categoryTaxonomy: s.categoryTaxonomy.map((m) =>
+            m.id === id
+              ? {
+                  ...m,
+                  ...(patch.emoji !== undefined ? { emoji: patch.emoji } : {}),
+                  ...(patch.label !== undefined ? { label: patch.label.trim() } : {}),
+                }
+              : m,
+          ),
+        })),
+
+      removeMainCategory: (id) =>
+        set((s) => ({
+          categoryTaxonomy: s.categoryTaxonomy.filter((m) => m.id !== id),
+        })),
+
+      reorderMainCategories: (kind, orderedIds) =>
+        set((s) => {
+          const sameKind = orderedIds
+            .map((id) => s.categoryTaxonomy.find((m) => m.id === id && m.kind === kind))
+            .filter((m): m is MainCategory => !!m);
+          const others = s.categoryTaxonomy.filter(
+            (m) => m.kind !== kind || !orderedIds.includes(m.id),
+          );
+          return { categoryTaxonomy: [...others, ...sameKind] };
+        }),
+
+      addSubCategory: (mainId, label) =>
+        set((s) => ({
+          categoryTaxonomy: s.categoryTaxonomy.map((m) =>
+            m.id === mainId
+              ? {
+                  ...m,
+                  subs: [...m.subs, { id: uid('scat'), label: label.trim() }],
+                }
+              : m,
+          ),
+        })),
+
+      updateSubCategory: (mainId, subId, label) =>
+        set((s) => ({
+          categoryTaxonomy: s.categoryTaxonomy.map((m) =>
+            m.id === mainId
+              ? {
+                  ...m,
+                  subs: m.subs.map((sc) =>
+                    sc.id === subId ? { ...sc, label: label.trim() } : sc,
+                  ),
+                }
+              : m,
+          ),
+        })),
+
+      removeSubCategory: (mainId, subId) =>
+        set((s) => ({
+          categoryTaxonomy: s.categoryTaxonomy.map((m) =>
+            m.id === mainId ? { ...m, subs: m.subs.filter((sc) => sc.id !== subId) } : m,
+          ),
+        })),
+
+      resetCategoryTaxonomy: () => set({ categoryTaxonomy: DEFAULT_CATEGORY_TAXONOMY }),
+
       addTransaction: (input) => {
         const tx: Transaction = { ...input, id: uid('t') };
         set((s) => ({ transactions: [...s.transactions, tx] }));
@@ -435,6 +525,15 @@ export const useStore = create<Store>()(
     }),
     {
       name: 'one-pie-store-v1',
+      // 기존 persist 데이터에 categoryTaxonomy가 없으면 기본 택소노미 주입
+      merge: (persistedState, currentState) => {
+        const persisted = (persistedState ?? {}) as Partial<State>;
+        const merged: Store = { ...currentState, ...persisted } as Store;
+        if (!merged.categoryTaxonomy || merged.categoryTaxonomy.length === 0) {
+          merged.categoryTaxonomy = DEFAULT_CATEGORY_TAXONOMY;
+        }
+        return merged;
+      },
     },
   ),
 );

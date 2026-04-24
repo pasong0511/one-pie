@@ -146,3 +146,26 @@ export type SettlementDecision =
   | { type: 'keep' }
   | { type: 'move'; toCategory: string }
   | { type: 'return' };
+
+// 전역 카테고리 택소노미 — 모든 계좌/거래가 공유하는 카테고리 정의.
+// 지출/수입으로 구분되며 메인 카테고리 아래에 서브를 가짐.
+// 거래의 `category` 필드에는 서브 label이 저장됨.
+export type CategoryKind = 'expense' | 'income';
+
+export type SubCategory = {
+  id: string;
+  label: string;
+};
+
+export type MainCategory = {
+  id: string;
+  kind: CategoryKind;
+  emoji: string;
+  label: string;
+  subs: SubCategory[];
+};
+
+export const CATEGORY_KIND_META: Record<CategoryKind, { emoji: string; label: string }> = {
+  expense: { emoji: '💸', label: '지출' },
+  income: { emoji: '💰', label: '수입' },
+};

@@ -8,8 +8,8 @@ import {
   visibleAccounts,
 } from '../utils/selectors';
 import { formatKRW, todayISO, monthOf } from '../utils/format';
-import CategoryChips from './CategoryChips';
-import CategoryManagerModal from './CategoryManagerModal';
+import { formatCategoryPath } from '../utils/category';
+import CategoryPickerModal from './CategoryPickerModal';
 import CalculatorModal from './CalculatorModal';
 
 export default function TransactionModal({
@@ -24,6 +24,7 @@ export default function TransactionModal({
   const currentUserId = useStore((s) => s.currentUserId)!;
   const accounts = useStore((s) => s.accounts);
   const transactions = useStore((s) => s.transactions);
+  const taxonomy = useStore((s) => s.categoryTaxonomy);
   const addTransaction = useStore((s) => s.addTransaction);
   const updateTransaction = useStore((s) => s.updateTransaction);
   const deleteTransaction = useStore((s) => s.deleteTransaction);
@@ -58,7 +59,7 @@ export default function TransactionModal({
   const [source, setSource] = useState<string>(editingTx?.source ?? '');
   const [isSupplement, setIsSupplement] = useState<boolean>(editingTx?.isSupplement ?? false);
   const [showWarn, setShowWarn] = useState(false);
-  const [catManagerOpen, setCatManagerOpen] = useState(false);
+  const [catPickerOpen, setCatPickerOpen] = useState(false);
   const [calcOpen, setCalcOpen] = useState(false);
 
   const canEdit =
@@ -66,9 +67,8 @@ export default function TransactionModal({
   const canDelete =
     isEdit && editingTx ? canDeleteTransaction(currentUserId, editingTx) : false;
 
-  const categoryOptions = acc?.categories ?? [];
   const month = monthOf(date);
-  const selectedCategory = categoryOptions.includes(category) ? category : '';
+  const selectedCategory = category || '';
 
   let warnMsg: string | null = null;
   if (
@@ -203,7 +203,11 @@ export default function TransactionModal({
                 <input
                   type="radio"
                   checked={kind === 'expense'}
-                  onChange={() => setKind('expense')}
+                  onChange={() => {
+                    setKind('expense');
+                    setCategory('');
+                    setShowWarn(false);
+                  }}
                 />
                 지출
               </label>
@@ -211,7 +215,11 @@ export default function TransactionModal({
                 <input
                   type="radio"
                   checked={kind === 'deposit'}
-                  onChange={() => setKind('deposit')}
+                  onChange={() => {
+                    setKind('deposit');
+                    setCategory('');
+                    setShowWarn(false);
+                  }}
                 />
                 입금
               </label>
@@ -261,28 +269,21 @@ export default function TransactionModal({
           </label>
 
           <label className="field">
-            <div className="cat-field-header">
-              <span className="label-text">카테고리</span>
-              {acc && (
-                <button
-                  type="button"
-                  className="cat-gear"
-                  onClick={() => setCatManagerOpen(true)}
-                  title="카테고리 추가/수정/삭제"
-                >
-                  ⚙ 설정
-                </button>
+            <span className="label-text">카테고리</span>
+            <button
+              type="button"
+              className="cat-picker-trigger"
+              onClick={() => setCatPickerOpen(true)}
+            >
+              {selectedCategory ? (
+                <span className="cat-picker-value">
+                  {formatCategoryPath(taxonomy, selectedCategory)}
+                </span>
+              ) : (
+                <span className="cat-picker-placeholder">+ 카테고리 선택</span>
               )}
-            </div>
-            <CategoryChips
-              categories={categoryOptions}
-              selected={selectedCategory}
-              onSelect={(c) => {
-                setCategory(c);
-                setShowWarn(false);
-              }}
-              emptyText="등록된 카테고리 없음 — ⚙ 설정에서 추가하세요"
-            />
+              <span className="cat-picker-chevron">›</span>
+            </button>
             {acc && kind === 'expense' && selectedCategory && acc.mode === '차감형' && (
               <div className="hint" style={{ marginTop: 6 }}>
                 현재 {selectedCategory} 남은 예산:{' '}
@@ -352,10 +353,15 @@ export default function TransactionModal({
           )}
         </div>
       </div>
-      {catManagerOpen && acc && (
-        <CategoryManagerModal
-          accountId={acc.id}
-          onClose={() => setCatManagerOpen(false)}
+      {catPickerOpen && (
+        <CategoryPickerModal
+          kind={kind === 'deposit' ? 'income' : 'expense'}
+          value={selectedCategory || undefined}
+          onSelect={(c) => {
+            setCategory(c);
+            setShowWarn(false);
+          }}
+          onClose={() => setCatPickerOpen(false)}
         />
       )}
       {calcOpen && (
