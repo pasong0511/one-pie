@@ -1606,14 +1606,42 @@ hr {
   font-size: 14px;
 }
 
-/* 거래 페이지 — 보기 토글 */
+/* 거래 페이지 — 툴바 (좌: 보기 토글 / 우: 검색) */
+.cal-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  gap: 8px;
+}
+.cal-toolbar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  box-shadow: none;
+}
+.cal-toolbar-icon svg {
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+.cal-toolbar-icon:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
 .cal-view-toggle {
   display: flex;
   gap: 4px;
   padding: 4px;
   background: var(--bg-hover);
   border-radius: 999px;
-  margin-bottom: 14px;
   width: fit-content;
 }
 .cal-view-tab {

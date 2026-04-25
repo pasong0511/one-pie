@@ -110,21 +110,35 @@ export default function Calendar() {
         }}
       />
 
-      {/* 보기 전환 토글 */}
-      <div className="cal-view-toggle">
+      {/* 보기 전환 + 검색 (좌: 토글 / 우: 검색) */}
+      <div className="cal-toolbar">
+        <div className="cal-view-toggle">
+          <button
+            type="button"
+            className={`cal-view-tab ${viewMode === 'list' ? 'active' : ''}`}
+            onClick={() => setViewMode('list')}
+          >
+            ☰ 목록
+          </button>
+          <button
+            type="button"
+            className={`cal-view-tab ${viewMode === 'calendar' ? 'active' : ''}`}
+            onClick={() => setViewMode('calendar')}
+          >
+            📅 달력
+          </button>
+        </div>
         <button
           type="button"
-          className={`cal-view-tab ${viewMode === 'list' ? 'active' : ''}`}
-          onClick={() => setViewMode('list')}
+          className="cal-toolbar-icon"
+          onClick={() => alert('거래 검색 기능 준비 중이에요.')}
+          title="거래 검색"
+          aria-label="거래 검색"
         >
-          ☰ 목록
-        </button>
-        <button
-          type="button"
-          className={`cal-view-tab ${viewMode === 'calendar' ? 'active' : ''}`}
-          onClick={() => setViewMode('calendar')}
-        >
-          📅 달력
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
         </button>
       </div>
 
