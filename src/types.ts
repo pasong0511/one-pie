@@ -169,3 +169,25 @@ export const CATEGORY_KIND_META: Record<CategoryKind, { emoji: string; label: st
   expense: { emoji: '💸', label: '지출' },
   income: { emoji: '💰', label: '수입' },
 };
+
+// 거래 입력 폼의 필드 식별자. 향후 설정에서 필드별 필수 여부를 사용자가
+// 토글할 수 있도록 키 단위로 관리. 'date'는 항상 값이 있으므로 제외.
+export type TxField = 'amount' | 'category' | 'memo' | 'source';
+
+// 사용자 환경설정. 향후 /settings/preferences 같은 페이지에서 편집.
+// 기본값은 '아무것도 강제하지 않음'으로 빠른 입력에 우선순위.
+export type Preferences = {
+  // 거래 추가/수정 시 필수로 강제할 필드. true면 비어있으면 저장 불가.
+  // 비어있는 키나 false는 모두 '선택'으로 취급.
+  txRequired: Partial<Record<TxField, boolean>>;
+  // 거래의 category가 undefined일 때 화면에 표시할 라벨.
+  // 통계/필터 그룹핑 키도 이 라벨로 통일됨.
+  uncategorizedLabel: string;
+};
+
+export const DEFAULT_PREFERENCES: Preferences = {
+  // 기본은 모든 필드가 선택 — 빠른 입력 우선.
+  // 향후 /settings/preferences에서 사용자가 필드별 필수 여부를 토글 가능.
+  txRequired: {},
+  uncategorizedLabel: '미분류',
+};

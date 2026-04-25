@@ -20,7 +20,9 @@
       "Bash(cp \"C:\\\\Users\\\\songhee\\\\.claude\\\\projects\\\\D--code-one-pie\\\\ee0526f7-0f95-4dd4-9c9f-ea52a3cff7a1\\\\tool-results\\\\webfetch-1776955193531-wcal0w.bin\" /tmp/design-extract2/design.gz)",
       "Bash(tar -xf design)",
       "Bash(npx vite *)",
-      "Bash(echo \"---EXIT $?---\")"
+      "Bash(echo \"---EXIT $?---\")",
+      "Bash(taskkill /F /FI \"WINDOWTITLE eq vite*\")",
+      "Bash(powershell \"Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force\")"
     ]
   }
 }

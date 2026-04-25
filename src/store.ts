@@ -3,9 +3,11 @@ import { persist } from 'zustand/middleware';
 import {
   Account,
   CategoryKind,
+  DEFAULT_PREFERENCES,
   FamilyGroup,
   Goal,
   MainCategory,
+  Preferences,
   RecurringRule,
   SettlementDecision,
   Transaction,
@@ -28,6 +30,7 @@ type State = {
   transactions: Transaction[];
   recurringRules: RecurringRule[];
   categoryTaxonomy: MainCategory[];
+  preferences: Preferences;
   initialized: boolean;
 };
 
@@ -51,6 +54,9 @@ type Actions = {
   updateSubCategory: (mainId: string, subId: string, label: string) => void;
   removeSubCategory: (mainId: string, subId: string) => void;
   resetCategoryTaxonomy: () => void;
+  // 사용자 환경설정 (필드 필수 여부, 미분류 라벨 등)
+  updatePreferences: (patch: Partial<Preferences>) => void;
+  resetPreferences: () => void;
   addTransaction: (input: Omit<Transaction, 'id'>) => Transaction;
   updateTransaction: (id: string, patch: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
@@ -84,6 +90,7 @@ const emptyState: State = {
   transactions: [],
   recurringRules: [],
   categoryTaxonomy: DEFAULT_CATEGORY_TAXONOMY,
+  preferences: DEFAULT_PREFERENCES,
   initialized: false,
 };
 
@@ -351,6 +358,20 @@ export const useStore = create<Store>()(
 
       resetCategoryTaxonomy: () => set({ categoryTaxonomy: DEFAULT_CATEGORY_TAXONOMY }),
 
+      updatePreferences: (patch) =>
+        set((s) => ({
+          preferences: {
+            ...s.preferences,
+            ...patch,
+            txRequired: {
+              ...s.preferences.txRequired,
+              ...(patch.txRequired ?? {}),
+            },
+          },
+        })),
+
+      resetPreferences: () => set({ preferences: DEFAULT_PREFERENCES }),
+
       addTransaction: (input) => {
         const tx: Transaction = { ...input, id: uid('t') };
         set((s) => ({ transactions: [...s.transactions, tx] }));
@@ -525,12 +546,29 @@ export const useStore = create<Store>()(
     }),
     {
       name: 'one-pie-store-v1',
-      // 기존 persist 데이터에 categoryTaxonomy가 없으면 기본 택소노미 주입
+      // 기존 persist 데이터에 신규 필드(taxonomy, preferences 등)가 없으면 기본값 주입.
+      // 또한 자동으로 박혔던 옛 기본 프리퍼런스({amount: true})도 현재 기본으로 리셋.
       merge: (persistedState, currentState) => {
         const persisted = (persistedState ?? {}) as Partial<State>;
         const merged: Store = { ...currentState, ...persisted } as Store;
         if (!merged.categoryTaxonomy || merged.categoryTaxonomy.length === 0) {
           merged.categoryTaxonomy = DEFAULT_CATEGORY_TAXONOMY;
+        }
+        if (!merged.preferences) {
+          merged.preferences = DEFAULT_PREFERENCES;
+        } else {
+          const tr = merged.preferences.txRequired;
+          if (
+            tr &&
+            Object.keys(tr).length === 1 &&
+            tr.amount === true
+          ) {
+            // 사용자가 손대지 않은 옛 자동 기본값. 현재 기본으로 리셋.
+            merged.preferences = {
+              ...merged.preferences,
+              txRequired: {},
+            };
+          }
         }
         return merged;
       },

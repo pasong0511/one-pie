@@ -55,6 +55,7 @@ export default function Stats() {
   const accounts = useStore((s) => s.accounts);
   const transactions = useStore((s) => s.transactions);
   const goals = useStore((s) => s.goals);
+  const uncategorizedLabel = useStore((s) => s.preferences.uncategorizedLabel);
   const [range, setRange] = useState<6 | 12>(6);
   const [month, setMonth] = useState<string>(currentMonth());
 
@@ -98,13 +99,13 @@ export default function Stats() {
       (t) => t.date.startsWith(month) && t.amount < 0,
     );
     for (const t of thisMonthExpenses) {
-      const cat = t.category ?? '미분류';
+      const cat = t.category ?? uncategorizedLabel;
       m[cat] = (m[cat] ?? 0) + -t.amount;
     }
     return Object.entries(m)
       .map(([name, amount]) => ({ name, amount }))
       .sort((a, b) => b.amount - a.amount);
-  }, [myTxs, month]);
+  }, [myTxs, month, uncategorizedLabel]);
 
   const totalExpense = categoryData.reduce((s, d) => s + d.amount, 0);
 

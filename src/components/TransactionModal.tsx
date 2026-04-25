@@ -26,6 +26,7 @@ export default function TransactionModal({
   const accounts = useStore((s) => s.accounts);
   const transactions = useStore((s) => s.transactions);
   const taxonomy = useStore((s) => s.categoryTaxonomy);
+  const preferences = useStore((s) => s.preferences);
   const addTransaction = useStore((s) => s.addTransaction);
   const updateTransaction = useStore((s) => s.updateTransaction);
   const deleteTransaction = useStore((s) => s.deleteTransaction);
@@ -59,7 +60,6 @@ export default function TransactionModal({
   const [memo, setMemo] = useState<string>(editingTx?.memo ?? '');
   const [source, setSource] = useState<string>(editingTx?.source ?? '');
   const [isSupplement, setIsSupplement] = useState<boolean>(editingTx?.isSupplement ?? false);
-  const [showWarn, setShowWarn] = useState(false);
   const [catPickerOpen, setCatPickerOpen] = useState(false);
   const [calcOpen, setCalcOpen] = useState(false);
 
@@ -70,6 +70,16 @@ export default function TransactionModal({
 
   const month = monthOf(date);
   const selectedCategory = category || '';
+
+  // 저장 가능 여부 — 계좌는 무조건 필요(데이터 정합성), 그 외는 환경설정에 따라.
+  // 기본은 amount만 필수, 나머지는 선택. preferences가 stale일 때도 빈 객체 fallback.
+  const req = preferences?.txRequired ?? {};
+  const canSubmit =
+    !!acc &&
+    (!req.amount || amount > 0) &&
+    (!req.category || !!selectedCategory) &&
+    (!req.memo || memo.trim().length > 0) &&
+    (!req.source || kind !== 'deposit' || source.trim().length > 0);
 
   let warnMsg: string | null = null;
   if (
@@ -118,12 +128,9 @@ export default function TransactionModal({
     }
   }
 
-  const handleSave = (force = false) => {
+  const handleSave = () => {
     if (!acc) return;
-    if (warnMsg && !force && !showWarn) {
-      setShowWarn(true);
-      return;
-    }
+    // 예산 초과 경고(warnMsg)는 인라인으로 이미 노출되므로 저장은 단일 클릭으로.
     const signed = kind === 'expense' ? -Math.abs(amount) : Math.abs(amount);
     const supplementFlag =
       kind === 'deposit' && acc.mode === '차감형' && isSupplement ? true : undefined;
@@ -207,7 +214,6 @@ export default function TransactionModal({
                   onChange={() => {
                     setKind('expense');
                     setCategory('');
-                    setShowWarn(false);
                   }}
                 />
                 지출
@@ -219,7 +225,6 @@ export default function TransactionModal({
                   onChange={() => {
                     setKind('deposit');
                     setCategory('');
-                    setShowWarn(false);
                   }}
                 />
                 입금
@@ -253,10 +258,7 @@ export default function TransactionModal({
               <NumericInput
                 value={amount}
                 allowNegative={false}
-                onChange={(v) => {
-                  setAmount(v);
-                  setShowWarn(false);
-                }}
+                onChange={setAmount}
               />
               <button
                 type="button"
@@ -317,11 +319,11 @@ export default function TransactionModal({
             <input value={memo} onChange={(e) => setMemo(e.target.value)} />
           </label>
 
-          {showWarn && warnMsg && (
+          {warnMsg && (
             <div className="warn-box">
               ⚠ {warnMsg}
               <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>
-                그대로 기록하면 초과 상태로 저장됩니다 (차단하지 않음).
+                그대로 기록됩니다 (예산 초과 상태로 저장).
               </div>
             </div>
           )}
@@ -339,39 +341,27 @@ export default function TransactionModal({
             </button>
           )}
           <button onClick={onClose}>취소</button>
-          {showWarn ? (
-            <button onClick={() => handleSave(true)} className="primary">
-              그대로 {isEdit ? '수정' : '기록'}
-            </button>
-          ) : (
-            <button
-              onClick={() => handleSave()}
-              className="primary"
-              disabled={!acc || !amount || (isEdit && !canEdit)}
-            >
-              {isEdit ? '수정하기' : '기록하기'}
-            </button>
-          )}
+          <button
+            onClick={handleSave}
+            className="primary"
+            disabled={!canSubmit || (isEdit && !canEdit)}
+          >
+            {isEdit ? '수정하기' : '기록하기'}
+          </button>
         </div>
       </div>
       {catPickerOpen && (
         <CategoryPickerModal
           kind={kind === 'deposit' ? 'income' : 'expense'}
           value={selectedCategory || undefined}
-          onSelect={(c) => {
-            setCategory(c);
-            setShowWarn(false);
-          }}
+          onSelect={setCategory}
           onClose={() => setCatPickerOpen(false)}
         />
       )}
       {calcOpen && (
         <CalculatorModal
           initialValue={amount}
-          onApply={(v) => {
-            setAmount(v);
-            setShowWarn(false);
-          }}
+          onApply={setAmount}
           onClose={() => setCalcOpen(false)}
         />
       )}
