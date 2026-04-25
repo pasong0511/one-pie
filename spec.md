@@ -817,7 +817,7 @@ type Goal = {
     - `budgetAllocations[month]` — 월별 카테고리 배정
     - `monthlyBudget[month]` — 월별 총 예산
     - 거래(Transaction)의 `date`
-  - AccountDetail 상단에 `MonthNavigator` (‹ 2026년 4월 › · 오늘로). 월을 바꾸면:
+  - AccountDetail 상단에 `MonthNavigator` (‹ 2026년 4월 ›). 월 라벨 탭 → `MonthPickerModal` bottom-sheet 에서 연·월 직접 선택(중앙 정렬 휠 스타일, 적용 버튼). 월을 바꾸면:
     - 차감형 요약(초기배정/추경/지출/남음) 모두 해당 월로 재계산
     - 카테고리 행의 배정/사용 모두 해당 월 기준
     - 거래 목록은 해당 월 거래만 표시 (빈 달이면 "다른 달에는 있음" 힌트)

@@ -1,6 +1,8 @@
-import { addMonths, currentMonth } from '../utils/format';
+import { useState } from 'react';
+import { addMonths } from '../utils/format';
+import MonthPickerModal from './MonthPickerModal';
 
-// 월 단위 뷰 전환 컨트롤 — ‹ 월 ›, 현재 달이 아니면 "오늘로" 표시
+// 월 단위 뷰 전환 컨트롤 — ‹ 월 ›, 월 탭하면 월 선택 모달
 export default function MonthNavigator({
   month,
   onChange,
@@ -8,32 +10,41 @@ export default function MonthNavigator({
   month: string;
   onChange: (m: string) => void;
 }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [y, m] = month.split('-');
-  const isCurrent = month === currentMonth();
   return (
-    <div className="month-nav">
-      <button
-        className="ghost"
-        onClick={() => onChange(addMonths(month, -1))}
-        aria-label="이전 달"
-      >
-        ‹
-      </button>
-      <button
-        className="ghost month-nav-title"
-        onClick={() => onChange(currentMonth())}
-        title={isCurrent ? '이번 달' : '오늘로 돌아가기'}
-      >
-        {y}년 {Number(m)}월
-        {!isCurrent && <span className="month-nav-today"> · 오늘로</span>}
-      </button>
-      <button
-        className="ghost"
-        onClick={() => onChange(addMonths(month, 1))}
-        aria-label="다음 달"
-      >
-        ›
-      </button>
-    </div>
+    <>
+      <div className="month-nav">
+        <button
+          className="ghost"
+          onClick={() => onChange(addMonths(month, -1))}
+          aria-label="이전 달"
+        >
+          ‹
+        </button>
+        <button
+          className="ghost month-nav-title"
+          onClick={() => setPickerOpen(true)}
+          aria-label="월 선택"
+          title="월 선택"
+        >
+          {y}년 {Number(m)}월
+        </button>
+        <button
+          className="ghost"
+          onClick={() => onChange(addMonths(month, 1))}
+          aria-label="다음 달"
+        >
+          ›
+        </button>
+      </div>
+      {pickerOpen && (
+        <MonthPickerModal
+          month={month}
+          onSelect={onChange}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
+    </>
   );
 }
