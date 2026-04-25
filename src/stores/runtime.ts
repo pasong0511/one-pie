@@ -63,7 +63,7 @@ function computeRouteMeta(pathname: string): RouteMeta {
 
   let title: string | null = null;
   if (pathname === '/') title = '홈';
-  else if (pathname === '/calendar') title = '달력';
+  else if (pathname === '/calendar') title = '거래';
   else if (pathname === '/stats') title = '통계';
   else if (pathname.startsWith('/settings')) title = '설정';
   else if (pathname === '/what-if') title = '이 소비 괜찮을까';

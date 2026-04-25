@@ -6,7 +6,7 @@ type IconName = 'home' | 'wallet' | 'cal' | 'chart' | 'settings';
 const TABS: { to: string; icon: IconName; label: string; end?: boolean }[] = [
   { to: '/', icon: 'home', label: '홈', end: true },
   { to: '/accounts', icon: 'wallet', label: '계좌' },
-  { to: '/calendar', icon: 'cal', label: '달력' },
+  { to: '/calendar', icon: 'cal', label: '거래' },
   { to: '/stats', icon: 'chart', label: '통계' },
   { to: '/settings', icon: 'settings', label: '설정' },
 ];

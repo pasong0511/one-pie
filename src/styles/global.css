@@ -1605,3 +1605,105 @@ hr {
 .cat-sub-row input {
   font-size: 14px;
 }
+
+/* 거래 페이지 — 보기 토글 */
+.cal-view-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-hover);
+  border-radius: 999px;
+  margin-bottom: 14px;
+  width: fit-content;
+}
+.cal-view-tab {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: none;
+}
+.cal-view-tab.active {
+  background: var(--bg-card);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+/* 리스트 뷰 그룹 */
+.cal-list-group {
+  margin-bottom: 16px;
+}
+.cal-list-date-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 8px 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.cal-list-date-label {
+  color: var(--text);
+}
+.cal-list-date-totals {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.cal-list-total.pos { color: var(--accent); }
+.cal-list-total.neg { color: var(--danger); }
+.cal-list-card {
+  padding: 4px 0;
+}
+.cal-list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.cal-list-row:last-child {
+  border-bottom: 0;
+}
+.cal-list-row-icon {
+  flex: 0 0 auto;
+  font-size: 22px;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-hover);
+  border-radius: 999px;
+}
+.cal-list-row-body {
+  flex: 1;
+  min-width: 0;
+}
+.cal-list-row-title {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-list-row-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-list-row-amt {
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.cal-list-row-amt.pos { color: var(--accent); }
+.cal-list-row-amt.neg { color: var(--text); }

@@ -1,21 +1,27 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../store';
 import { canEditTransaction, visibleAccounts } from '../utils/selectors';
-import { addMonths, currentMonth, formatCompact, formatKRW, todayISO } from '../utils/format';
-import { ACCOUNT_TYPE_META } from '../types';
+import { currentMonth, formatCompact, formatKRW, todayISO } from '../utils/format';
+import { Account, ACCOUNT_TYPE_META, MainCategory, Transaction, User } from '../types';
+import { formatCategoryPath } from '../utils/category';
 import TransactionModal from '../components/TransactionModal';
+import MonthNavigator from '../components/MonthNavigator';
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
+
+type ViewMode = 'list' | 'calendar';
 
 export default function Calendar() {
   const currentUserId = useStore((s) => s.currentUserId)!;
   const accounts = useStore((s) => s.accounts);
   const transactions = useStore((s) => s.transactions);
   const users = useStore((s) => s.users);
+  const taxonomy = useStore((s) => s.categoryTaxonomy);
 
   const [cursor, setCursor] = useState<string>(currentMonth()); // 'YYYY-MM'
   const [selected, setSelected] = useState<string>(todayISO());
   const [editTx, setEditTx] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   const visibleAccs = useMemo(
     () => visibleAccounts(currentUserId, accounts),
@@ -27,30 +33,34 @@ export default function Calendar() {
     [transactions, visibleIds],
   );
 
-  // 이번 커서 달의 날짜별 집계
+  // 이번 달 거래만
+  const monthTxs = useMemo(
+    () => myTxs.filter((t) => t.date.startsWith(cursor)),
+    [myTxs, cursor],
+  );
+
+  // 달력 모드용 날짜별 집계
   const byDate = useMemo(() => {
     const map: Record<string, { income: number; expense: number; count: number }> = {};
-    const prefix = cursor;
-    for (const t of myTxs) {
-      if (!t.date.startsWith(prefix)) continue;
+    for (const t of monthTxs) {
       if (!map[t.date]) map[t.date] = { income: 0, expense: 0, count: 0 };
       if (t.amount > 0) map[t.date].income += t.amount;
       else map[t.date].expense += -t.amount;
       map[t.date].count++;
     }
     return map;
-  }, [myTxs, cursor]);
+  }, [monthTxs]);
 
   const grid = useMemo(() => buildGrid(cursor), [cursor]);
   const today = todayISO();
 
-  // 선택한 날짜의 거래 목록
+  // 선택한 날짜의 거래 목록 (달력 모드)
   const selectedTxs = useMemo(
     () =>
-      myTxs
+      monthTxs
         .filter((t) => t.date === selected)
         .sort((a, b) => (b.id > a.id ? 1 : -1)),
-    [myTxs, selected],
+    [monthTxs, selected],
   );
   const selectedIncome = selectedTxs
     .filter((t) => t.amount > 0)
@@ -59,34 +69,209 @@ export default function Calendar() {
     .filter((t) => t.amount < 0)
     .reduce((s, t) => s - t.amount, 0);
 
-  // 월 이동
-  const prevMonth = () => setCursor(addMonths(cursor, -1));
-  const nextMonth = () => setCursor(addMonths(cursor, 1));
-  const jumpToday = () => {
-    setCursor(currentMonth());
-    setSelected(todayISO());
-  };
+  // 리스트 모드용 — 날짜 내림차순 그룹
+  const groupedByDate = useMemo(() => {
+    const map = new Map<string, Transaction[]>();
+    for (const t of monthTxs) {
+      const arr = map.get(t.date) ?? [];
+      arr.push(t);
+      map.set(t.date, arr);
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+      .map(([date, txs]) => ({
+        date,
+        txs: txs.sort((a, b) => (a.id < b.id ? 1 : -1)),
+        income: txs.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0),
+        expense: txs
+          .filter((t) => t.amount < 0)
+          .reduce((s, t) => s + Math.abs(t.amount), 0),
+      }));
+  }, [monthTxs]);
 
-  const cursorLabel = (() => {
-    const [y, m] = cursor.split('-');
-    return `${y}년 ${Number(m)}월`;
-  })();
 
   return (
     <div>
-      {/* 상단: 달력 */}
-      <div className="card cal-card">
-        <div className="cal-header">
-          <button className="ghost" onClick={prevMonth} aria-label="이전 달">
-            ‹
-          </button>
-          <button className="ghost cal-title" onClick={jumpToday} title="오늘로">
-            {cursorLabel}
-          </button>
-          <button className="ghost" onClick={nextMonth} aria-label="다음 달">
-            ›
-          </button>
+      {/* 상단: 월 네비 (다른 페이지와 동일) */}
+      <MonthNavigator
+        month={cursor}
+        onChange={(m) => {
+          setCursor(m);
+          if (m === currentMonth()) setSelected(todayISO());
+        }}
+      />
+
+      {/* 보기 전환 토글 */}
+      <div className="cal-view-toggle">
+        <button
+          type="button"
+          className={`cal-view-tab ${viewMode === 'list' ? 'active' : ''}`}
+          onClick={() => setViewMode('list')}
+        >
+          ☰ 목록
+        </button>
+        <button
+          type="button"
+          className={`cal-view-tab ${viewMode === 'calendar' ? 'active' : ''}`}
+          onClick={() => setViewMode('calendar')}
+        >
+          📅 달력
+        </button>
+      </div>
+
+      {viewMode === 'list' && (
+        <ListView
+          groups={groupedByDate}
+          taxonomy={taxonomy}
+          accounts={accounts}
+          users={users}
+          currentUserId={currentUserId}
+          today={today}
+          onEdit={setEditTx}
+        />
+      )}
+
+      {viewMode === 'calendar' && (
+        <CalendarView
+          cursor={cursor}
+          grid={grid}
+          byDate={byDate}
+          today={today}
+          selected={selected}
+          onSelectDate={setSelected}
+          selectedTxs={selectedTxs}
+          selectedIncome={selectedIncome}
+          selectedExpense={selectedExpense}
+          accounts={accounts}
+          users={users}
+          currentUserId={currentUserId}
+          onEdit={setEditTx}
+        />
+      )}
+
+      {editTx && (
+        <TransactionModal
+          transactionId={editTx}
+          onClose={() => setEditTx(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// 리스트 뷰: 날짜별 그룹 헤더 + 거래 행 (뱅크샐러드 가계부 스타일)
+// ────────────────────────────────────────────────────────────────────────
+function ListView(props: {
+  groups: { date: string; txs: Transaction[]; income: number; expense: number }[];
+  taxonomy: MainCategory[];
+  accounts: Account[];
+  users: User[];
+  currentUserId: string;
+  today: string;
+  onEdit: (id: string) => void;
+}) {
+  const { groups, taxonomy, accounts, users, currentUserId, today, onEdit } = props;
+
+  if (groups.length === 0) {
+    return <div className="empty" style={{ padding: 32 }}>이번 달 거래가 없어요.</div>;
+  }
+
+  return (
+    <div>
+      {groups.map((g) => (
+        <div key={g.date} className="cal-list-group">
+          <div className="cal-list-date-header">
+            <div className="cal-list-date-label">{formatDayHeader(g.date, today)}</div>
+            <div className="cal-list-date-totals">
+              {g.income > 0 && (
+                <span className="cal-list-total pos">+{formatKRW(g.income)}</span>
+              )}
+              {g.expense > 0 && (
+                <span className="cal-list-total neg">-{formatKRW(g.expense)}</span>
+              )}
+            </div>
+          </div>
+          <div className="card cal-list-card">
+            {g.txs.map((t) => {
+              const acc = accounts.find((a) => a.id === t.accountId);
+              const authorName = users.find((u) => u.id === t.authorId)?.name;
+              const editable = acc ? canEditTransaction(currentUserId, acc, t) : false;
+              const catLabel = t.category
+                ? formatCategoryPath(taxonomy, t.category)
+                : t.amount > 0
+                  ? t.source ?? '입금'
+                  : '미분류';
+              return (
+                <div
+                  key={t.id}
+                  className="cal-list-row"
+                  style={{ cursor: editable ? 'pointer' : 'default' }}
+                  onClick={() => editable && onEdit(t.id)}
+                >
+                  <div className="cal-list-row-icon">
+                    {acc?.emoji ?? '📒'}
+                  </div>
+                  <div className="cal-list-row-body">
+                    <div className="cal-list-row-title">{catLabel}</div>
+                    <div className="cal-list-row-sub">
+                      {acc?.name ?? '—'}
+                      {acc?.type ? ` · ${ACCOUNT_TYPE_META[acc.type].label}` : ''}
+                      {t.memo ? ` · ${t.memo}` : ''}
+                      {authorName ? ` · ${authorName}` : ''}
+                      {t.isSupplement && ' · 💰 추경'}
+                    </div>
+                  </div>
+                  <div className={`cal-list-row-amt ${t.amount >= 0 ? 'pos' : 'neg'}`}>
+                    {t.amount >= 0 ? '+' : ''}
+                    {formatKRW(t.amount)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
+      ))}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// 달력 뷰: 그리드 + 선택 날짜 거래 목록 (기존 UI)
+// ────────────────────────────────────────────────────────────────────────
+function CalendarView(props: {
+  cursor: string;
+  grid: (string | null)[];
+  byDate: Record<string, { income: number; expense: number; count: number }>;
+  today: string;
+  selected: string;
+  onSelectDate: (d: string) => void;
+  selectedTxs: Transaction[];
+  selectedIncome: number;
+  selectedExpense: number;
+  accounts: Account[];
+  users: User[];
+  currentUserId: string;
+  onEdit: (id: string) => void;
+}) {
+  const {
+    grid,
+    byDate,
+    today,
+    selected,
+    onSelectDate,
+    selectedTxs,
+    selectedIncome,
+    selectedExpense,
+    accounts,
+    users,
+    currentUserId,
+    onEdit,
+  } = props;
+
+  return (
+    <>
+      <div className="card cal-card">
         <div className="cal-weekdays">
           {WEEKDAY_LABELS.map((w, i) => (
             <div
@@ -114,7 +299,7 @@ export default function Calendar() {
               <button
                 key={date}
                 className={`cal-cell ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}`}
-                onClick={() => setSelected(date)}
+                onClick={() => onSelectDate(date)}
               >
                 <span
                   className="cal-day"
@@ -147,7 +332,6 @@ export default function Calendar() {
         </div>
       </div>
 
-      {/* 하단: 선택한 날짜의 거래 */}
       <div className="section-title" style={{ marginTop: 16 }}>
         {formatDateKo(selected)}
         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400 }}>
@@ -182,7 +366,7 @@ export default function Calendar() {
               key={t.id}
               className="cal-tx-item"
               style={{ cursor: editable ? 'pointer' : 'default' }}
-              onClick={() => editable && setEditTx(t.id)}
+              onClick={() => editable && onEdit(t.id)}
             >
               <div className="cal-tx-left">
                 <div className="cal-tx-acc">
@@ -207,14 +391,7 @@ export default function Calendar() {
           );
         })}
       </div>
-
-      {editTx && (
-        <TransactionModal
-          transactionId={editTx}
-          onClose={() => setEditTx(null)}
-        />
-      )}
-    </div>
+    </>
   );
 }
 
@@ -237,4 +414,13 @@ function formatDateKo(iso: string): string {
   const date = new Date(y, m - 1, d);
   const dow = WEEKDAY_LABELS[date.getDay()];
   return `${y}년 ${m}월 ${d}일 (${dow})`;
+}
+
+// 리스트 뷰의 날짜 헤더 — 오늘이면 "25일 오늘", 아니면 "24일 금요일"
+function formatDayHeader(iso: string, today: string): string {
+  const [, , dd] = iso.split('-').map(Number);
+  if (iso === today) return `${dd}일 오늘`;
+  const d = new Date(iso);
+  const dow = WEEKDAY_LABELS[d.getDay()];
+  return `${dd}일 ${dow}요일`;
 }
