@@ -42,7 +42,9 @@ export default function App() {
   );
 
   const pathname = location.pathname;
-  const showSwitcher = pathname === '/' || pathname === '/accounts';
+  // 스위처는 계좌 영역(/accounts, /account/:id)에서만 노출. 그 외엔 메뉴 타이틀.
+  const showSwitcher =
+    pathname === '/accounts' || pathname.startsWith('/account/');
   const pageTitle = !showSwitcher ? getPageTitle(pathname) : null;
 
   if (!currentUserId || hasInvite) {
@@ -125,11 +127,11 @@ export default function App() {
 }
 
 function getPageTitle(pathname: string): string | null {
+  if (pathname === '/') return '홈';
   if (pathname === '/calendar') return '달력';
   if (pathname === '/stats') return '통계';
   if (pathname.startsWith('/settings')) return '설정';
   if (pathname === '/what-if') return '이 소비 괜찮을까';
-  if (pathname.startsWith('/account/')) return '계좌';
   if (pathname.startsWith('/goal/')) return '목표';
   return null;
 }

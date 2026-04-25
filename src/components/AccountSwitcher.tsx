@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../store';
 import { visibleAccounts } from '../utils/selectors';
 
-// 상단바 좌측: 계좌 목록을 레이어(드롭다운)로 보여주는 스위처.
-// 당근마켓의 지역 선택 드롭다운 패턴. 탭(내꺼 / 공유)으로 필터,
-// 하단에 '내 계좌 관리' 링크.
+// 상단바 좌측: 계좌 페이지에서만 노출되는 계좌 내비게이터.
+// - '전체 계좌' 선택 → /accounts (목록 보기 유지)
+// - 특정 계좌 선택 → /account/:id (상세 진입)
+// 트리거 라벨은 현재 컨텍스트(상세 진입 시 그 계좌명, 그 외 '전체 계좌').
 export default function AccountSwitcher() {
   const navigate = useNavigate();
+  const params = useParams();
   const currentUserId = useStore((s) => s.currentUserId)!;
   const accounts = useStore((s) => s.accounts);
 
@@ -36,7 +38,17 @@ export default function AccountSwitcher() {
   const shared = visible.filter((a) => a.ownerId !== currentUserId);
   const list = tab === 'mine' ? mine : shared;
 
-  const go = (id: string) => {
+  const detailId = params.id ?? null;
+  const detailAcc = detailId ? visible.find((a) => a.id === detailId) ?? null : null;
+  const triggerLabel = detailAcc
+    ? `${detailAcc.emoji ?? '📒'} ${detailAcc.name}`
+    : '전체 계좌';
+
+  const goAll = () => {
+    setOpen(false);
+    navigate('/accounts');
+  };
+  const goDetail = (id: string) => {
     setOpen(false);
     navigate(`/account/${id}`);
   };
@@ -49,12 +61,20 @@ export default function AccountSwitcher() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
-        <span>계좌</span>
+        <span>{triggerLabel}</span>
         <span className={`acct-switch-caret ${open ? 'up' : ''}`}>▾</span>
       </button>
 
       {open && (
         <div className="acct-switch-layer" role="menu">
+          <button
+            type="button"
+            className={`acct-switch-all ${detailAcc === null ? 'active' : ''}`}
+            onClick={goAll}
+          >
+            🧾 전체 계좌
+          </button>
+
           <div className="acct-switch-tabs">
             <button
               type="button"
@@ -82,8 +102,8 @@ export default function AccountSwitcher() {
               <button
                 key={a.id}
                 type="button"
-                className="acct-switch-item"
-                onClick={() => go(a.id)}
+                className={`acct-switch-item ${detailId === a.id ? 'active' : ''}`}
+                onClick={() => goDetail(a.id)}
               >
                 <span className="acct-switch-emoji">{a.emoji ?? '📒'}</span>
                 <span className="acct-switch-name">{a.name}</span>

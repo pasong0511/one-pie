@@ -64,9 +64,7 @@ export default function AccountDetail() {
   return (
     <div>
       <div className="row between" style={{ marginBottom: 8 }}>
-        <button className="ghost" onClick={() => navigate('/')}>
-          ← 대시보드
-        </button>
+        <div />
         <div style={{ display: 'flex', gap: 4 }}>
           <button onClick={() => setPropOpen(true)}>⚙ 속성</button>
         </div>

@@ -128,9 +128,7 @@ export default function Stats() {
   return (
     <div>
       <div className="row between" style={{ marginBottom: 8 }}>
-        <button className="ghost" onClick={() => navigate('/')}>
-          ← 대시보드
-        </button>
+        <div />
         <div className="row" style={{ gap: 4 }}>
           <button
             className={range === 6 ? 'primary' : ''}

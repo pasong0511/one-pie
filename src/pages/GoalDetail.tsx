@@ -30,9 +30,7 @@ export default function GoalDetail() {
   return (
     <div>
       <div className="row between" style={{ marginBottom: 8 }}>
-        <button className="ghost" onClick={() => navigate('/')}>
-          ← 대시보드
-        </button>
+        <div />
         <button onClick={() => setEditOpen(true)}>⚙ 편집</button>
       </div>
       <h2 style={{ margin: '0 0 4px' }}>
