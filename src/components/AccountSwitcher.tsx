@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import { visibleAccounts } from '../utils/selectors';
+import { usePageRuntime } from '../stores/runtime';
 
 // 상단바 좌측: 계좌 페이지에서만 노출되는 계좌 내비게이터.
 // - '전체 계좌' 선택 → /accounts (목록 보기 유지)
@@ -9,7 +10,7 @@ import { visibleAccounts } from '../utils/selectors';
 // 트리거 라벨은 현재 컨텍스트(상세 진입 시 그 계좌명, 그 외 '전체 계좌').
 export default function AccountSwitcher() {
   const navigate = useNavigate();
-  const params = useParams();
+  const currentAccountId = usePageRuntime((s) => s.currentAccountId);
   const currentUserId = useStore((s) => s.currentUserId)!;
   const accounts = useStore((s) => s.accounts);
 
@@ -38,7 +39,7 @@ export default function AccountSwitcher() {
   const shared = visible.filter((a) => a.ownerId !== currentUserId);
   const list = tab === 'mine' ? mine : shared;
 
-  const detailId = params.id ?? null;
+  const detailId = currentAccountId;
   const detailAcc = detailId ? visible.find((a) => a.id === detailId) ?? null : null;
   const triggerLabel = detailAcc
     ? `${detailAcc.emoji ?? '📒'} ${detailAcc.name}`

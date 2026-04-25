@@ -9,6 +9,7 @@ import {
 } from '../utils/selectors';
 import { formatKRW, todayISO, monthOf } from '../utils/format';
 import { formatCategoryPath } from '../utils/category';
+import { usePageRuntime } from '../stores/runtime';
 import CategoryPickerModal from './CategoryPickerModal';
 import CalculatorModal from './CalculatorModal';
 import NumericInput from './NumericInput';
@@ -41,8 +42,20 @@ export default function TransactionModal({
     [currentUserId, accounts],
   );
 
+  // 사용자가 보고 있던 계좌(/account/:id)를 기본값으로 — 단, 쓰기 가능한 경우에만.
+  // 우선순위: 편집중 거래 > 명시적 defaultAccountId > 현재 보고 있던 계좌 > 첫 쓰기 가능 계좌
+  const runtimeAccountId = usePageRuntime((s) => s.currentAccountId);
+  const runtimeWritable =
+    runtimeAccountId && writable.some((a) => a.id === runtimeAccountId)
+      ? runtimeAccountId
+      : null;
+
   const [accountId, setAccountId] = useState<string>(
-    editingTx?.accountId ?? defaultAccountId ?? writable[0]?.id ?? '',
+    editingTx?.accountId ??
+      defaultAccountId ??
+      runtimeWritable ??
+      writable[0]?.id ??
+      '',
   );
   const acc = accounts.find((a) => a.id === accountId);
   const [kind, setKind] = useState<'expense' | 'deposit'>(

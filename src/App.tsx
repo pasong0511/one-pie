@@ -19,6 +19,7 @@ import LowBalanceToast from './components/LowBalanceToast';
 import GlobalTxButton from './components/GlobalTxButton';
 import BottomNav from './components/BottomNav';
 import AccountSwitcher from './components/AccountSwitcher';
+import { usePageRuntime, useRouteMeta } from './stores/runtime';
 
 // Stats는 recharts를 쓰므로 lazy-load (초기 번들에서 제외 → 모바일 초기 로딩 빠르게)
 const Stats = lazy(() => import('./pages/Stats'));
@@ -41,11 +42,32 @@ export default function App() {
     [location.search],
   );
 
-  const pathname = location.pathname;
-  // 스위처는 계좌 영역(/accounts, /account/:id)에서만 노출. 그 외엔 메뉴 타이틀.
-  const showSwitcher =
-    pathname === '/accounts' || pathname.startsWith('/account/');
-  const pageTitle = !showSwitcher ? getPageTitle(pathname) : null;
+  // URL → PageRuntime 동기화. 모든 컨텍스트(라우트, 현재 계좌/목표 id)는
+  // 여기서 한 번에 채워서 다른 컴포넌트들이 useStore가 아닌 usePageRuntime 구독.
+  const setRoute = usePageRuntime((s) => s.setRoute);
+  const setCurrentAccount = usePageRuntime((s) => s.setCurrentAccount);
+  const setCurrentGoal = usePageRuntime((s) => s.setCurrentGoal);
+  useEffect(() => {
+    const path = location.pathname;
+    let params: Record<string, string> = {};
+    let acctId: string | null = null;
+    let goalId: string | null = null;
+    const acctMatch = path.match(/^\/account\/([^/]+)/);
+    if (acctMatch) {
+      params = { id: acctMatch[1] };
+      acctId = acctMatch[1];
+    }
+    const goalMatch = path.match(/^\/goal\/([^/]+)/);
+    if (goalMatch) {
+      params = { id: goalMatch[1] };
+      goalId = goalMatch[1];
+    }
+    setRoute(path, params);
+    setCurrentAccount(acctId);
+    setCurrentGoal(goalId);
+  }, [location.pathname, setRoute, setCurrentAccount, setCurrentGoal]);
+
+  const { title: pageTitle, showSwitcher } = useRouteMeta();
 
   if (!currentUserId || hasInvite) {
     return (
@@ -124,14 +146,4 @@ export default function App() {
       <BottomNav />
     </div>
   );
-}
-
-function getPageTitle(pathname: string): string | null {
-  if (pathname === '/') return '홈';
-  if (pathname === '/calendar') return '달력';
-  if (pathname === '/stats') return '통계';
-  if (pathname.startsWith('/settings')) return '설정';
-  if (pathname === '/what-if') return '이 소비 괜찮을까';
-  if (pathname.startsWith('/goal/')) return '목표';
-  return null;
 }
