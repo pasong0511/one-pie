@@ -6,6 +6,7 @@ import { Account, ACCOUNT_TYPE_META, MainCategory, Transaction, User } from '../
 import { formatCategoryPath } from '../utils/category';
 import TransactionModal from '../components/TransactionModal';
 import MonthNavigator from '../components/MonthNavigator';
+import { usePageRuntime } from '../stores/runtime';
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -17,6 +18,7 @@ export default function Calendar() {
   const transactions = useStore((s) => s.transactions);
   const users = useStore((s) => s.users);
   const taxonomy = useStore((s) => s.categoryTaxonomy);
+  const filterAccountIds = usePageRuntime((s) => s.txFilterAccountIds);
 
   const [cursor, setCursor] = useState<string>(currentMonth()); // 'YYYY-MM'
   const [selected, setSelected] = useState<string>(todayISO());
@@ -28,9 +30,16 @@ export default function Calendar() {
     [currentUserId, accounts],
   );
   const visibleIds = useMemo(() => new Set(visibleAccs.map((a) => a.id)), [visibleAccs]);
+  // 헤더 필터: 빈 배열이면 전체, 아니면 선택된 계좌만
+  const filterSet = useMemo(() => new Set(filterAccountIds), [filterAccountIds]);
   const myTxs = useMemo(
-    () => transactions.filter((t) => visibleIds.has(t.accountId)),
-    [transactions, visibleIds],
+    () =>
+      transactions.filter(
+        (t) =>
+          visibleIds.has(t.accountId) &&
+          (filterSet.size === 0 || filterSet.has(t.accountId)),
+      ),
+    [transactions, visibleIds, filterSet],
   );
 
   // 이번 달 거래만

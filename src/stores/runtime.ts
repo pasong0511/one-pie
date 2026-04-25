@@ -23,11 +23,18 @@ export type PageRuntime = {
   currentGoalId: string | null;
   currentTxId: string | null;
 
+  // 거래 페이지 다중 계좌 필터. 빈 배열 = 전체.
+  // 새로고침 전까지 유지 (페이지 이동해도 살아있음).
+  txFilterAccountIds: string[];
+
   // 액션
   setRoute: (route: string, params?: Record<string, string>) => void;
   setCurrentAccount: (id: string | null) => void;
   setCurrentGoal: (id: string | null) => void;
   setCurrentTx: (id: string | null) => void;
+  setTxFilterAccountIds: (ids: string[]) => void;
+  toggleTxFilterAccount: (id: string) => void;
+  clearTxFilterAccounts: () => void;
 };
 
 export const usePageRuntime = create<PageRuntime>((set) => ({
@@ -36,10 +43,22 @@ export const usePageRuntime = create<PageRuntime>((set) => ({
   currentAccountId: null,
   currentGoalId: null,
   currentTxId: null,
+  txFilterAccountIds: [],
   setRoute: (route, params = {}) => set({ route, routeParams: params }),
   setCurrentAccount: (id) => set({ currentAccountId: id }),
   setCurrentGoal: (id) => set({ currentGoalId: id }),
   setCurrentTx: (id) => set({ currentTxId: id }),
+  setTxFilterAccountIds: (ids) => set({ txFilterAccountIds: ids }),
+  toggleTxFilterAccount: (id) =>
+    set((s) => {
+      const has = s.txFilterAccountIds.includes(id);
+      return {
+        txFilterAccountIds: has
+          ? s.txFilterAccountIds.filter((x) => x !== id)
+          : [...s.txFilterAccountIds, id],
+      };
+    }),
+  clearTxFilterAccounts: () => set({ txFilterAccountIds: [] }),
 }));
 
 // ──────────────────────────────────────────────────────────────────────────

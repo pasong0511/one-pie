@@ -19,6 +19,7 @@ import LowBalanceToast from './components/LowBalanceToast';
 import GlobalTxButton from './components/GlobalTxButton';
 import BottomNav from './components/BottomNav';
 import AccountSwitcher from './components/AccountSwitcher';
+import TxAccountFilter from './components/TxAccountFilter';
 import { usePageRuntime, useRouteMeta } from './stores/runtime';
 
 // Stats는 recharts를 쓰므로 lazy-load (초기 번들에서 제외 → 모바일 초기 로딩 빠르게)
@@ -84,6 +85,8 @@ export default function App() {
       <div className="topbar">
         {showSwitcher ? (
           <AccountSwitcher />
+        ) : location.pathname === '/calendar' ? (
+          <TxAccountFilter />
         ) : (
           <h1 className="topbar-title">{pageTitle ?? ''}</h1>
         )}
