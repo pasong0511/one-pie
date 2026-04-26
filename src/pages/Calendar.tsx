@@ -6,6 +6,7 @@ import { currentMonth, formatCompact, formatKRW, todayISO } from '../utils/forma
 import { Account, ACCOUNT_TYPE_META, MainCategory, Transaction, User } from '../types';
 import { formatCategoryPath } from '../utils/category';
 import MonthNavigator from '../components/MonthNavigator';
+import TransactionSearchModal from '../components/TransactionSearchModal';
 import { usePageRuntime } from '../stores/runtime';
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -24,6 +25,7 @@ export default function Calendar() {
   const [cursor, setCursor] = useState<string>(currentMonth()); // 'YYYY-MM'
   const [selected, setSelected] = useState<string>(todayISO());
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [searchOpen, setSearchOpen] = useState(false);
   const goEdit = (id: string) => navigate(`/tx/${id}`);
 
   const visibleAccs = useMemo(
@@ -132,7 +134,7 @@ export default function Calendar() {
         <button
           type="button"
           className="cal-toolbar-icon"
-          onClick={() => alert('거래 검색 기능 준비 중이에요.')}
+          onClick={() => setSearchOpen(true)}
           title="거래 검색"
           aria-label="거래 검색"
         >
@@ -173,6 +175,16 @@ export default function Calendar() {
         />
       )}
 
+      {searchOpen && (
+        <TransactionSearchModal
+          transactions={myTxs}
+          accounts={accounts}
+          users={users}
+          taxonomy={taxonomy}
+          onPick={goEdit}
+          onClose={() => setSearchOpen(false)}
+        />
+      )}
     </div>
   );
 }

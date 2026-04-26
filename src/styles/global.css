@@ -1043,6 +1043,124 @@ hr {
   border-radius: var(--radius);
 }
 
+/* ─── 거래 검색 모달 (bottom sheet) ─── */
+.modal-backdrop.sheet .modal.tx-search {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  border-radius: 20px 20px 0 0;
+  padding: 0;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+.tx-search-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.tx-search-input-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--bg-alt);
+  border-radius: 999px;
+  min-width: 0;
+}
+.tx-search-icon {
+  display: inline-flex;
+  color: var(--text-muted);
+  flex: 0 0 auto;
+}
+.tx-search-icon svg {
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.tx-search-input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  outline: none;
+  padding: 0;
+  min-width: 0;
+}
+.tx-search-clear {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 11px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.tx-search-cancel {
+  font-size: 14px;
+  color: var(--accent);
+  padding: 6px 4px;
+  flex: 0 0 auto;
+}
+.tx-search-body {
+  flex: 1;
+  overflow-y: auto;
+}
+.tx-search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.tx-search-row:hover {
+  background: var(--bg-hover);
+}
+.tx-search-row-icon {
+  flex: 0 0 auto;
+  font-size: 22px;
+  width: 32px;
+  text-align: center;
+}
+.tx-search-row-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.tx-search-row-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tx-search-row-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tx-search-row-amt {
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
+}
+.tx-search-row-amt.pos {
+  color: var(--accent);
+}
+.tx-search-row-amt.neg {
+  color: var(--text);
+}
+
 /* ─── 거래 추가/수정 페이지 (/tx/new, /tx/:id) ─── */
 .tx-page {
   display: flex;
