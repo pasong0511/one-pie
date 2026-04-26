@@ -15,6 +15,7 @@ import SettingsFamily from './pages/settings/Family';
 import SettingsDeveloper from './pages/settings/Developer';
 import SettingsCategories from './pages/settings/Categories';
 import Calendar from './pages/Calendar';
+import Transaction from './pages/Transaction';
 import LowBalanceToast from './components/LowBalanceToast';
 import GlobalTxButton from './components/GlobalTxButton';
 import BottomNav from './components/BottomNav';
@@ -68,7 +69,7 @@ export default function App() {
     setCurrentGoal(goalId);
   }, [location.pathname, setRoute, setCurrentAccount, setCurrentGoal]);
 
-  const { title: pageTitle, showSwitcher } = useRouteMeta();
+  const { title: pageTitle, showSwitcher, showBack, hideChrome } = useRouteMeta();
 
   if (!currentUserId || hasInvite) {
     return (
@@ -83,39 +84,51 @@ export default function App() {
   return (
     <div className="app">
       <div className="topbar">
-        {showSwitcher ? (
+        {showBack ? (
+          <button
+            type="button"
+            className="ghost topbar-back"
+            onClick={() => navigate(-1)}
+            aria-label="뒤로 가기"
+          >
+            ‹
+          </button>
+        ) : showSwitcher ? (
           <AccountSwitcher />
         ) : location.pathname === '/calendar' ? (
           <TxAccountFilter />
         ) : (
           <h1 className="topbar-title">{pageTitle ?? ''}</h1>
         )}
-        <div className="topbar-right">
-          <button
-            type="button"
-            className="topbar-icon-btn"
-            onClick={() => alert('알림이 없어요.')}
-            title="알림"
-            aria-label="알림"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9" />
-              <path d="M10 21a2 2 0 004 0" />
-            </svg>
-          </button>
-          <button
-            className="user-chip"
-            onClick={() => {
-              setCurrentUser(null);
-              navigate('/');
-            }}
-            title="사용자 전환"
-          >
-            <span>{currentUser?.emoji ?? '👤'}</span>
-            <span>{currentUser?.name ?? ''}</span>
-            <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>전환 ▾</span>
-          </button>
-        </div>
+        {showBack && <h1 className="topbar-title topbar-title-center">{pageTitle ?? ''}</h1>}
+        {!hideChrome && (
+          <div className="topbar-right">
+            <button
+              type="button"
+              className="topbar-icon-btn"
+              onClick={() => alert('알림이 없어요.')}
+              title="알림"
+              aria-label="알림"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9" />
+                <path d="M10 21a2 2 0 004 0" />
+              </svg>
+            </button>
+            <button
+              className="user-chip"
+              onClick={() => {
+                setCurrentUser(null);
+                navigate('/');
+              }}
+              title="사용자 전환"
+            >
+              <span>{currentUser?.emoji ?? '👤'}</span>
+              <span>{currentUser?.name ?? ''}</span>
+              <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>전환 ▾</span>
+            </button>
+          </div>
+        )}
       </div>
 
       <LowBalanceToast />
@@ -126,6 +139,7 @@ export default function App() {
         <Route path="/account/:id" element={<AccountDetail />} />
         <Route path="/goal/:id" element={<GoalDetail />} />
         <Route path="/calendar" element={<Calendar />} />
+        <Route path="/tx/:id" element={<Transaction />} />
         <Route path="/what-if" element={<WhatIf />} />
         <Route
           path="/stats"
@@ -145,8 +159,8 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      <GlobalTxButton />
-      <BottomNav />
+      {!hideChrome && <GlobalTxButton />}
+      {!hideChrome && <BottomNav />}
     </div>
   );
 }

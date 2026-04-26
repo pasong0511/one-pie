@@ -1043,6 +1043,48 @@ hr {
   border-radius: var(--radius);
 }
 
+/* ─── 거래 추가/수정 페이지 (/tx/new, /tx/:id) ─── */
+.tx-page {
+  display: flex;
+  flex-direction: column;
+}
+.tx-page-body {
+  flex: 1;
+  padding-bottom: 16px;
+}
+.tx-page-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px));
+  position: sticky;
+  bottom: 0;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+}
+
+/* ─── topbar 뒤로가기 (페이지형 풀스크린용) ─── */
+.topbar-back {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 24px;
+  line-height: 1;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-strong);
+}
+.topbar-title-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
 /* ─── 달력 ─── */
 .cal-card {
   padding: 12px;

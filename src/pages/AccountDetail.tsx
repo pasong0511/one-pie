@@ -11,7 +11,6 @@ import {
   sumSpentInMonth,
 } from '../utils/selectors';
 import { formatKRW, currentMonth } from '../utils/format';
-import TransactionModal from '../components/TransactionModal';
 import PropertyPanel from '../components/PropertyPanel';
 import SettlementModal from '../components/SettlementModal';
 import MonthNavigator from '../components/MonthNavigator';
@@ -28,7 +27,6 @@ export default function AccountDetail() {
   const transactions = useStore((s) => s.transactions);
   const users = useStore((s) => s.users);
   const goals = useStore((s) => s.goals);
-  const [txOpen, setTxOpen] = useState<{ txId?: string } | null>(null);
   const [propOpen, setPropOpen] = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
   const [month, setMonth] = useState<string>(navState?.month ?? currentMonth());
@@ -182,7 +180,7 @@ export default function AccountDetail() {
             <div
               key={t.id}
               className="tx-row"
-              onClick={clickable ? () => setTxOpen({ txId: t.id }) : undefined}
+              onClick={clickable ? () => navigate(`/tx/${t.id}`) : undefined}
               style={clickable ? { cursor: 'pointer' } : undefined}
               title={clickable ? '클릭하여 수정/삭제' : undefined}
             >
@@ -213,7 +211,7 @@ export default function AccountDetail() {
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
           <button
             className="primary"
-            onClick={() => setTxOpen({})}
+            onClick={() => navigate(`/tx/new?accountId=${account.id}`)}
           >
             + 거래
           </button>
@@ -225,13 +223,6 @@ export default function AccountDetail() {
         </div>
       )}
 
-      {txOpen && (
-        <TransactionModal
-          defaultAccountId={account.id}
-          transactionId={txOpen.txId}
-          onClose={() => setTxOpen(null)}
-        />
-      )}
       {propOpen && <PropertyPanel accountId={account.id} month={month} onClose={() => setPropOpen(false)} />}
       {settleOpen && (
         <SettlementModal

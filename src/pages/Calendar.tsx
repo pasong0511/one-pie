@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import { canEditTransaction, visibleAccounts } from '../utils/selectors';
 import { currentMonth, formatCompact, formatKRW, todayISO } from '../utils/format';
 import { Account, ACCOUNT_TYPE_META, MainCategory, Transaction, User } from '../types';
 import { formatCategoryPath } from '../utils/category';
-import TransactionModal from '../components/TransactionModal';
 import MonthNavigator from '../components/MonthNavigator';
 import { usePageRuntime } from '../stores/runtime';
 
@@ -19,11 +19,12 @@ export default function Calendar() {
   const users = useStore((s) => s.users);
   const taxonomy = useStore((s) => s.categoryTaxonomy);
   const filterAccountIds = usePageRuntime((s) => s.txFilterAccountIds);
+  const navigate = useNavigate();
 
   const [cursor, setCursor] = useState<string>(currentMonth()); // 'YYYY-MM'
   const [selected, setSelected] = useState<string>(todayISO());
-  const [editTx, setEditTx] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const goEdit = (id: string) => navigate(`/tx/${id}`);
 
   const visibleAccs = useMemo(
     () => visibleAccounts(currentUserId, accounts),
@@ -150,7 +151,7 @@ export default function Calendar() {
           users={users}
           currentUserId={currentUserId}
           today={today}
-          onEdit={setEditTx}
+          onEdit={goEdit}
         />
       )}
 
@@ -168,16 +169,10 @@ export default function Calendar() {
           accounts={accounts}
           users={users}
           currentUserId={currentUserId}
-          onEdit={setEditTx}
+          onEdit={goEdit}
         />
       )}
 
-      {editTx && (
-        <TransactionModal
-          transactionId={editTx}
-          onClose={() => setEditTx(null)}
-        />
-      )}
     </div>
   );
 }

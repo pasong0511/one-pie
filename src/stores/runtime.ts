@@ -68,6 +68,8 @@ export const usePageRuntime = create<PageRuntime>((set) => ({
 export type RouteMeta = {
   title: string | null;       // 상단바 타이틀 (스위처가 안 보일 때만)
   showSwitcher: boolean;      // 좌측에 AccountSwitcher 노출
+  showBack: boolean;          // 좌측에 뒤로가기(‹) 버튼 노출
+  hideChrome: boolean;        // BottomNav / GlobalTxButton / 우측 알림·유저칩 숨김
 };
 
 export function useRouteMeta(): RouteMeta {
@@ -76,9 +78,18 @@ export function useRouteMeta(): RouteMeta {
 }
 
 function computeRouteMeta(pathname: string): RouteMeta {
+  if (pathname === '/tx/new') {
+    return { title: '거래 추가', showSwitcher: false, showBack: true, hideChrome: true };
+  }
+  if (pathname.startsWith('/tx/')) {
+    return { title: '거래 수정', showSwitcher: false, showBack: true, hideChrome: true };
+  }
+
   const showSwitcher =
     pathname === '/accounts' || pathname.startsWith('/account/');
-  if (showSwitcher) return { title: null, showSwitcher: true };
+  if (showSwitcher) {
+    return { title: null, showSwitcher: true, showBack: false, hideChrome: false };
+  }
 
   let title: string | null = null;
   if (pathname === '/') title = '홈';
@@ -87,7 +98,7 @@ function computeRouteMeta(pathname: string): RouteMeta {
   else if (pathname.startsWith('/settings')) title = '설정';
   else if (pathname === '/what-if') title = '이 소비 괜찮을까';
   else if (pathname.startsWith('/goal/')) title = '목표';
-  return { title, showSwitcher: false };
+  return { title, showSwitcher: false, showBack: false, hideChrome: false };
 }
 
 // ──────────────────────────────────────────────────────────────────────────
