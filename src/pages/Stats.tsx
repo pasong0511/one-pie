@@ -127,8 +127,9 @@ function useMyTxs() {
 // ──────────────────────────────────────────────────────────────────────────
 function SummarySection({ month }: { month: string }) {
   const myTxs = useMyTxs();
+  // 이체는 수입/지출 통계에서 제외 — 잔액 이동일 뿐.
   const thisMonthTxs = useMemo(
-    () => myTxs.filter((t) => t.date.startsWith(month)),
+    () => myTxs.filter((t) => t.date.startsWith(month) && t.kind !== 'transfer'),
     [myTxs, month],
   );
   const income = thisMonthTxs
@@ -170,7 +171,8 @@ function useMonthlyRows(month: string, range: 6 | 12): MonthRow[] {
     const rows: MonthRow[] = [];
     for (let i = range - 1; i >= 0; i--) {
       const m = addMonths(month, -i);
-      const txs = myTxs.filter((t) => t.date.startsWith(m));
+      // 이체 제외
+      const txs = myTxs.filter((t) => t.date.startsWith(m) && t.kind !== 'transfer');
       const income = txs.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0);
       const expense = txs.filter((t) => t.amount < 0).reduce((s, t) => s - t.amount, 0);
       rows.push({ month: m, label: m.slice(5) + '월', income, expense, net: income - expense });
@@ -261,8 +263,9 @@ function CategorySection({ month }: { month: string }) {
 
   const categoryData = useMemo(() => {
     const m: Record<string, number> = {};
+    // 이체 제외 — 카테고리별 지출에 들어가면 안 됨
     const thisMonthExpenses = myTxs.filter(
-      (t) => t.date.startsWith(month) && t.amount < 0,
+      (t) => t.date.startsWith(month) && t.amount < 0 && t.kind !== 'transfer',
     );
     for (const t of thisMonthExpenses) {
       const cat = t.category ?? uncategorizedLabel;
@@ -342,7 +345,8 @@ function AccountTypeSection({ month }: { month: string }) {
   const accounts = useStore((s) => s.accounts);
   const byAccountType = useMemo(() => {
     const m: Record<string, { income: number; expense: number }> = {};
-    const thisMonthTxs = myTxs.filter((t) => t.date.startsWith(month));
+    // 이체 제외
+    const thisMonthTxs = myTxs.filter((t) => t.date.startsWith(month) && t.kind !== 'transfer');
     for (const t of thisMonthTxs) {
       const acc = accounts.find((a) => a.id === t.accountId);
       const key = acc?.type ?? '계좌';

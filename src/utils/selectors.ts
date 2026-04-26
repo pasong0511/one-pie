@@ -46,6 +46,7 @@ export function visibleGoals(userId: string, goals: Goal[], users: User[]): Goal
   });
 }
 
+// 지출 합계 — 이체(transfer)는 잔액 이동일 뿐 실제 소비가 아니므로 제외.
 export function sumSpentInMonth(
   accountId: string,
   month: string,
@@ -55,10 +56,11 @@ export function sumSpentInMonth(
   return transactions
     .filter((t) => t.accountId === accountId && monthOf(t.date) === month)
     .filter((t) => (category ? t.category === category : true))
-    .filter((t) => t.amount < 0)
+    .filter((t) => t.amount < 0 && t.kind !== 'transfer')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 }
 
+// 수입 합계 — 마찬가지로 이체 제외.
 export function sumInflowInMonth(
   accountId: string,
   month: string,
@@ -68,7 +70,7 @@ export function sumInflowInMonth(
   return transactions
     .filter((t) => t.accountId === accountId && monthOf(t.date) === month)
     .filter((t) => (category ? t.category === category : true))
-    .filter((t) => t.amount > 0)
+    .filter((t) => t.amount > 0 && t.kind !== 'transfer')
     .reduce((sum, t) => sum + t.amount, 0);
 }
 

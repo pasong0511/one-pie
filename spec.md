@@ -450,6 +450,13 @@
 > - 계좌 상세 `+ 거래` 버튼 → `/tx/new?accountId=…` (기본 계좌 지정)
 > - 거래 행 클릭 → `/tx/:id` (수정)
 
+**거래 종류 (`TxKind`)**
+- `expense` (지출) — 외부로 빠진 돈, amount 음수
+- `deposit` (입금) — 외부에서 들어온 돈, amount 양수, 차감형 계좌면 `isSupplement` 추경 옵션 노출
+- `transfer` (이체) — 내 계좌간 이동, amount 음수(기본 출금 방향). **수입/지출 통계와 예산 집계에서 제외** (`sumSpentInMonth`/`sumInflowInMonth`/Stats 차트/Calendar 일별 합계 모두 `t.kind !== 'transfer'` 필터). 단 잔액(`cumulativeBalance`)에는 영향. 카테고리 픽커는 `kind='all'` 모드로 지출/수입 카테고리 양쪽 노출 (이체는 어느 쪽으로도 분류 가능).
+- 리스트 행에는 `↔ 이체` 칩으로 시각적 구분 (Calendar 목록/달력 모드, AccountDetail, 검색 결과 모두).
+- legacy 호환: `Transaction.kind` 누락 시 `resolveTxKind()` 가 amount 부호로 추론 (`amount >= 0 ? 'deposit' : 'expense'`).
+
 ```
 ┌──────── 거래 기록 ────────────────[×]─┐
 │                                        │

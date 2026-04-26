@@ -58,14 +58,15 @@ export default function Calendar() {
     [myTxs, cursor],
   );
 
-  // 달력 모드용 날짜별 집계
+  // 달력 모드용 날짜별 집계 — count 는 이체 포함, income/expense 는 이체 제외
   const byDate = useMemo(() => {
     const map: Record<string, { income: number; expense: number; count: number }> = {};
     for (const t of monthTxs) {
       if (!map[t.date]) map[t.date] = { income: 0, expense: 0, count: 0 };
+      map[t.date].count++;
+      if (t.kind === 'transfer') continue;
       if (t.amount > 0) map[t.date].income += t.amount;
       else map[t.date].expense += -t.amount;
-      map[t.date].count++;
     }
     return map;
   }, [monthTxs]);
@@ -81,11 +82,12 @@ export default function Calendar() {
         .sort((a, b) => (b.id > a.id ? 1 : -1)),
     [monthTxs, selected],
   );
+  // 선택 날짜 합계 — 이체 제외
   const selectedIncome = selectedTxs
-    .filter((t) => t.amount > 0)
+    .filter((t) => t.amount > 0 && t.kind !== 'transfer')
     .reduce((s, t) => s + t.amount, 0);
   const selectedExpense = selectedTxs
-    .filter((t) => t.amount < 0)
+    .filter((t) => t.amount < 0 && t.kind !== 'transfer')
     .reduce((s, t) => s - t.amount, 0);
 
   // 리스트 모드용 — 날짜 내림차순 그룹
@@ -101,9 +103,12 @@ export default function Calendar() {
       .map(([date, txs]) => ({
         date,
         txs: txs.sort((a, b) => (a.id < b.id ? 1 : -1)),
-        income: txs.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0),
+        // 이체는 일별 합계에서 제외
+        income: txs
+          .filter((t) => t.amount > 0 && t.kind !== 'transfer')
+          .reduce((s, t) => s + t.amount, 0),
         expense: txs
-          .filter((t) => t.amount < 0)
+          .filter((t) => t.amount < 0 && t.kind !== 'transfer')
           .reduce((s, t) => s + Math.abs(t.amount), 0),
       }));
   }, [monthTxs]);
@@ -268,6 +273,7 @@ function ListView(props: {
                       {t.memo ? ` · ${t.memo}` : ''}
                       {authorName ? ` · ${authorName}` : ''}
                       {t.isSupplement && ' · 💰 추경'}
+                      {t.kind === 'transfer' && ' · ↔ 이체'}
                     </div>
                   </div>
                   <div className={`cal-list-row-amt ${t.amount >= 0 ? 'pos' : 'neg'}`}>
@@ -427,6 +433,11 @@ function CalendarView(props: {
                   {t.isSupplement && (
                     <span className="chip mode-cumulative" style={{ marginLeft: 6, fontSize: 10 }}>
                       💰 추경
+                    </span>
+                  )}
+                  {t.kind === 'transfer' && (
+                    <span className="chip" style={{ marginLeft: 6, fontSize: 10 }}>
+                      ↔ 이체
                     </span>
                   )}
                 </div>

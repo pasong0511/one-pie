@@ -14,6 +14,7 @@ import { usePageRuntime } from '../stores/runtime';
 import CategoryPickerModal from '../components/CategoryPickerModal';
 import CalculatorModal from '../components/CalculatorModal';
 import NumericInput from '../components/NumericInput';
+import { resolveTxKind, TxKind } from '../types';
 
 // 거래 추가/수정 페이지.
 // 라우트: /tx/new (?accountId=…), /tx/:id
@@ -58,11 +59,9 @@ export default function Transaction() {
       '',
   );
   const acc = accounts.find((a) => a.id === accountId);
-  const [kind, setKind] = useState<'expense' | 'deposit'>(
+  const [kind, setKind] = useState<TxKind>(
     editingTx
-      ? editingTx.amount >= 0
-        ? 'deposit'
-        : 'expense'
+      ? resolveTxKind(editingTx)
       : acc?.mode === '누적형'
         ? 'deposit'
         : 'expense',
@@ -152,13 +151,17 @@ export default function Transaction() {
 
   const handleSave = () => {
     if (!acc) return;
-    const signed = kind === 'expense' ? -Math.abs(amount) : Math.abs(amount);
+    // 부호 규칙: deposit 양수, expense/transfer 음수 (이체는 기본 출금 방향).
+    const signed = kind === 'deposit' ? Math.abs(amount) : -Math.abs(amount);
     const supplementFlag =
       kind === 'deposit' && acc.mode === '차감형' && isSupplement ? true : undefined;
+    // kind 는 명시 저장 — transfer 만 amount 부호로 추론 불가하므로 필수,
+    // expense/deposit 는 호환성을 위해 생략 가능하지만 일관성 위해 함께 저장.
     if (isEdit && editingTx) {
       updateTransaction(editingTx.id, {
         date,
         amount: signed,
+        kind,
         category: selectedCategory || undefined,
         source: source || undefined,
         memo: memo || undefined,
@@ -170,6 +173,7 @@ export default function Transaction() {
         authorId: currentUserId,
         date,
         amount: signed,
+        kind,
         category: selectedCategory || undefined,
         source: source || undefined,
         memo: memo || undefined,
@@ -243,7 +247,23 @@ export default function Transaction() {
               />
               입금
             </label>
+            <label className={kind === 'transfer' ? 'selected' : ''}>
+              <input
+                type="radio"
+                checked={kind === 'transfer'}
+                onChange={() => {
+                  setKind('transfer');
+                  setCategory('');
+                }}
+              />
+              ↔ 이체
+            </label>
           </div>
+          {kind === 'transfer' && (
+            <div className="hint" style={{ marginTop: 6 }}>
+              이체는 잔액에는 영향을 주지만 수입/지출 통계엔 포함되지 않아요. 카테고리는 지출·수입 양쪽에서 선택 가능.
+            </div>
+          )}
         </label>
 
         {kind === 'deposit' && acc?.mode === '차감형' && (
@@ -367,7 +387,13 @@ export default function Transaction() {
 
       {catPickerOpen && (
         <CategoryPickerModal
-          kind={kind === 'deposit' ? 'income' : 'expense'}
+          kind={
+            kind === 'transfer'
+              ? 'all'
+              : kind === 'deposit'
+                ? 'income'
+                : 'expense'
+          }
           value={selectedCategory || undefined}
           onSelect={setCategory}
           onClose={() => setCatPickerOpen(false)}

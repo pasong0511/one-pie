@@ -196,6 +196,11 @@ export default function AccountDetail() {
                     💰 추경
                   </span>
                 )}
+                {t.kind === 'transfer' && (
+                  <span className="chip" style={{ marginLeft: 6, fontSize: 10 }}>
+                    ↔ 이체
+                  </span>
+                )}
                 <span className="author" style={{ marginLeft: 8 }}>· {authorName}</span>
               </div>
               <div className={`amount ${t.amount >= 0 ? 'positive' : 'negative'}`}>

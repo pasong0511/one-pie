@@ -61,12 +61,20 @@ export type Account = {
   createdAt: string;
 };
 
+// 거래의 종류. 입력 폼의 라디오 + 분류 태그.
+//   expense  = 지출 (외부로 빠진 돈)
+//   deposit  = 입금 (외부에서 들어온 돈, 수입)
+//   transfer = 이체 (내 계좌간 이동) — 잔액에는 영향 주지만 수입/지출 통계에는 제외
+// 누락 시 amount 부호로 추론 (legacy 호환): 양수 → deposit, 음수 → expense.
+export type TxKind = 'expense' | 'deposit' | 'transfer';
+
 export type Transaction = {
   id: string;
   accountId: string;
   authorId: string;
   date: string;              // 'YYYY-MM-DD'
   amount: number;            // + inflow / - outflow
+  kind?: TxKind;             // 명시적 분류. 없으면 amount 부호로 추론.
   category?: string;
   source?: string;           // 자유 입력 출처 라벨 (입금 시)
   memo?: string;
@@ -74,6 +82,11 @@ export type Transaction = {
   sourceRuleId?: string;     // 반복 규칙으로 생성된 경우 원본 규칙 id
   isSupplement?: boolean;    // 차감형 전용: 예산 추경 여부 (양수 거래만 의미). 체크 시 예산에 합산.
 };
+
+// 거래의 kind 결정 — 명시 필드 우선, 없으면 부호로.
+export function resolveTxKind(t: Pick<Transaction, 'kind' | 'amount'>): TxKind {
+  return t.kind ?? (t.amount >= 0 ? 'deposit' : 'expense');
+}
 
 export type RecurringInterval =
   | 'daily'

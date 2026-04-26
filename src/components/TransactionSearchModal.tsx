@@ -48,13 +48,22 @@ export default function TransactionSearchModal({
         const memo = t.memo?.toLowerCase() ?? '';
         const source = t.source?.toLowerCase() ?? '';
         const amountStr = String(Math.abs(t.amount));
+        const kindLabel =
+          t.kind === 'transfer'
+            ? '이체 transfer'
+            : t.kind === 'deposit'
+              ? '입금 deposit'
+              : t.kind === 'expense'
+                ? '지출 expense'
+                : '';
         return (
           memo.includes(q) ||
           catLabel.includes(q) ||
           source.includes(q) ||
           accName.includes(q) ||
           amountStr.includes(q) ||
-          t.date.includes(q)
+          t.date.includes(q) ||
+          kindLabel.includes(q)
         );
       })
       .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
@@ -130,7 +139,14 @@ export default function TransactionSearchModal({
               >
                 <div className="tx-search-row-icon">{acc?.emoji ?? '📒'}</div>
                 <div className="tx-search-row-body">
-                  <div className="tx-search-row-title">{catLabel}</div>
+                  <div className="tx-search-row-title">
+                    {catLabel}
+                    {t.kind === 'transfer' && (
+                      <span className="chip" style={{ marginLeft: 6, fontSize: 10 }}>
+                        ↔ 이체
+                      </span>
+                    )}
+                  </div>
                   <div className="tx-search-row-sub">
                     {t.date} · {acc?.name ?? '—'}
                     {t.memo ? ` · ${t.memo}` : ''}
