@@ -20,7 +20,14 @@ export default function Calendar() {
   const users = useStore((s) => s.users);
   const taxonomy = useStore((s) => s.categoryTaxonomy);
   const filterAccountIds = usePageRuntime((s) => s.txFilterAccountIds);
+  const calendarSections = useStore((s) => s.preferences.calendarSections);
   const navigate = useNavigate();
+
+  // 툴바 항목별 표시 토글 — 미설정/true 모두 표시.
+  // 둘 다 꺼지면 툴바 자체가 사라짐.
+  const showViewToggle = calendarSections.viewToggle !== false;
+  const showSearch = calendarSections.search !== false;
+  const showToolbar = showViewToggle || showSearch;
 
   const [cursor, setCursor] = useState<string>(currentMonth()); // 'YYYY-MM'
   const [selected, setSelected] = useState<string>(todayISO());
@@ -103,8 +110,8 @@ export default function Calendar() {
 
 
   return (
-    <div>
-      {/* 상단: 월 네비 (다른 페이지와 동일) */}
+    <div className="calendar-page">
+      {/* MonthNavigator 는 페이지 전역 헤더 — 모든 섹션의 month 컨텍스트 */}
       <MonthNavigator
         month={cursor}
         onChange={(m) => {
@@ -113,67 +120,78 @@ export default function Calendar() {
         }}
       />
 
-      {/* 보기 전환 + 검색 (좌: 토글 / 우: 검색) */}
-      <div className="cal-toolbar">
-        <div className="cal-view-toggle">
-          <button
-            type="button"
-            className={`cal-view-tab ${viewMode === 'list' ? 'active' : ''}`}
-            onClick={() => setViewMode('list')}
-          >
-            ☰ 목록
-          </button>
-          <button
-            type="button"
-            className={`cal-view-tab ${viewMode === 'calendar' ? 'active' : ''}`}
-            onClick={() => setViewMode('calendar')}
-          >
-            📅 달력
-          </button>
-        </div>
-        <button
-          type="button"
-          className="cal-toolbar-icon"
-          onClick={() => setSearchOpen(true)}
-          title="거래 검색"
-          aria-label="거래 검색"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="7" />
-            <path d="m20 20-3.5-3.5" />
-          </svg>
-        </button>
-      </div>
-
-      {viewMode === 'list' && (
-        <ListView
-          groups={groupedByDate}
-          taxonomy={taxonomy}
-          accounts={accounts}
-          users={users}
-          currentUserId={currentUserId}
-          today={today}
-          onEdit={goEdit}
-        />
+      {showToolbar && (
+        <section className="page-section page-section-toolbar">
+          <div className="cal-toolbar">
+            {showViewToggle ? (
+              <div className="cal-view-toggle">
+                <button
+                  type="button"
+                  className={`cal-view-tab ${viewMode === 'list' ? 'active' : ''}`}
+                  onClick={() => setViewMode('list')}
+                >
+                  ☰ 목록
+                </button>
+                <button
+                  type="button"
+                  className={`cal-view-tab ${viewMode === 'calendar' ? 'active' : ''}`}
+                  onClick={() => setViewMode('calendar')}
+                >
+                  📅 달력
+                </button>
+              </div>
+            ) : (
+              <div />
+            )}
+            {showSearch && (
+              <button
+                type="button"
+                className="cal-toolbar-icon"
+                onClick={() => setSearchOpen(true)}
+                title="거래 검색"
+                aria-label="거래 검색"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.5-3.5" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </section>
       )}
 
-      {viewMode === 'calendar' && (
-        <CalendarView
-          cursor={cursor}
-          grid={grid}
-          byDate={byDate}
-          today={today}
-          selected={selected}
-          onSelectDate={setSelected}
-          selectedTxs={selectedTxs}
-          selectedIncome={selectedIncome}
-          selectedExpense={selectedExpense}
-          accounts={accounts}
-          users={users}
-          currentUserId={currentUserId}
-          onEdit={goEdit}
-        />
-      )}
+      <section className="page-section page-section-content">
+        {viewMode === 'list' && (
+          <ListView
+            groups={groupedByDate}
+            taxonomy={taxonomy}
+            accounts={accounts}
+            users={users}
+            currentUserId={currentUserId}
+            today={today}
+            onEdit={goEdit}
+          />
+        )}
+
+        {viewMode === 'calendar' && (
+          <CalendarView
+            cursor={cursor}
+            grid={grid}
+            byDate={byDate}
+            today={today}
+            selected={selected}
+            onSelectDate={setSelected}
+            selectedTxs={selectedTxs}
+            selectedIncome={selectedIncome}
+            selectedExpense={selectedExpense}
+            accounts={accounts}
+            users={users}
+            currentUserId={currentUserId}
+            onEdit={goEdit}
+          />
+        )}
+      </section>
 
       {searchOpen && (
         <TransactionSearchModal

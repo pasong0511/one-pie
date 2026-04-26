@@ -174,9 +174,18 @@ export const CATEGORY_KIND_META: Record<CategoryKind, { emoji: string; label: st
 // 토글할 수 있도록 키 단위로 관리. 'date'는 항상 값이 있으므로 제외.
 export type TxField = 'amount' | 'category' | 'memo' | 'source';
 
-// 홈(대시보드)에서 표시할 섹션. /settings/home에서 토글.
-// 빈 키나 undefined는 '표시'(true)로 취급.
+// 페이지별 표시 가능 섹션 키. 각 페이지의 /settings/{page}-view 에서 토글.
+// 모든 키는 '미설정/true = 표시', false = 숨김 규칙을 따름.
 export type HomeSection = 'goals' | 'accounts';
+export type AccountsSection = 'mine' | 'shared';
+export type CalendarSection = 'viewToggle' | 'search';
+export type StatsSection =
+  | 'summary'
+  | 'monthly'
+  | 'net'
+  | 'category'
+  | 'accountType'
+  | 'activeGoals';
 
 // 사용자 환경설정. 향후 /settings/preferences 같은 페이지에서 편집.
 // 기본값은 '아무것도 강제하지 않음'으로 빠른 입력에 우선순위.
@@ -187,9 +196,11 @@ export type Preferences = {
   // 거래의 category가 undefined일 때 화면에 표시할 라벨.
   // 통계/필터 그룹핑 키도 이 라벨로 통일됨.
   uncategorizedLabel: string;
-  // 홈(대시보드)의 섹션별 표시 토글. false면 숨김(빈 상태도 함께 숨김).
-  // 기본 미설정/true 모두 표시로 취급.
+  // 페이지별 섹션 표시 토글. false 만 숨김(빈 상태도 함께), 미설정/true 모두 표시.
   homeSections: Partial<Record<HomeSection, boolean>>;
+  accountsSections: Partial<Record<AccountsSection, boolean>>;
+  calendarSections: Partial<Record<CalendarSection, boolean>>;
+  statsSections: Partial<Record<StatsSection, boolean>>;
 };
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -198,4 +209,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   txRequired: {},
   uncategorizedLabel: '미분류',
   homeSections: {},
+  accountsSections: {},
+  calendarSections: {},
+  statsSections: {},
 };

@@ -1502,6 +1502,19 @@ hr {
   background: var(--accent-dark);
 }
 
+/* 설정 메뉴 그룹 헤더 (화면 표시 / 데이터 / 기타 등) */
+.settings-group + .settings-group {
+  margin-top: 20px;
+}
+.settings-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: var(--tracking);
+  margin: 0 4px 6px;
+  text-transform: uppercase;
+}
+
 /* 설정 메뉴 리스트 (카카오톡 스타일) */
 .settings-menu {
   list-style: none;
@@ -1563,6 +1576,37 @@ hr {
   color: var(--text-faint);
   font-size: 22px;
   line-height: 1;
+}
+
+/* ─── 페이지 섹션 (Dashboard / Accounts / Calendar / Stats 공용) ─── */
+.page-section + .page-section {
+  margin-top: 32px;
+}
+.page-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin: 4px 0 6px;
+}
+.page-subtitle.page-subtitle-spaced {
+  margin-top: 16px;
+}
+/* Dashboard — What-if 섹션은 평소 섹션보다 좁은 마진 + 자체 layout */
+.page-section + .page-section.page-section-whatif {
+  margin-top: 24px;
+}
+.page-section-whatif {
+  display: flex;
+  gap: 8px;
+}
+/* Calendar — 차트/리스트 섹션 사이는 인접 섹션 표준(32px) 너무 넓음 → 16px */
+.page-section + .page-section.page-section-toolbar,
+.page-section + .page-section.page-section-content {
+  margin-top: 12px;
+}
+/* Stats — 차트들은 16px 간격이 적당 */
+.page-section.page-section-stat + .page-section.page-section-stat {
+  margin-top: 16px;
 }
 
 /* iOS 스타일 토글 스위치 — 설정 메뉴 우측에 chevron 대신 사용 */

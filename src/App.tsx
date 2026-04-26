@@ -15,6 +15,9 @@ import SettingsFamily from './pages/settings/Family';
 import SettingsDeveloper from './pages/settings/Developer';
 import SettingsCategories from './pages/settings/Categories';
 import SettingsHome from './pages/settings/Home';
+import SettingsAccountsView from './pages/settings/AccountsView';
+import SettingsCalendarView from './pages/settings/CalendarView';
+import SettingsStatsView from './pages/settings/StatsView';
 import Calendar from './pages/Calendar';
 import Transaction from './pages/Transaction';
 import LowBalanceToast from './components/LowBalanceToast';
@@ -152,6 +155,9 @@ export default function App() {
         />
         <Route path="/settings" element={<Settings />} />
         <Route path="/settings/home" element={<SettingsHome />} />
+        <Route path="/settings/accounts-view" element={<SettingsAccountsView />} />
+        <Route path="/settings/calendar-view" element={<SettingsCalendarView />} />
+        <Route path="/settings/stats-view" element={<SettingsStatsView />} />
         <Route path="/settings/accounts" element={<SettingsAccounts />} />
         <Route path="/settings/goals" element={<SettingsGoals />} />
         <Route path="/settings/recurring" element={<SettingsRecurring />} />

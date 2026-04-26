@@ -1,31 +1,52 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore, remainingBudget, cumulativeBalance } from '../store';
 import { visibleAccounts, visibleGoals, goalProgress } from '../utils/selectors';
 import { formatKRW, currentMonth } from '../utils/format';
 import { Account, ACCOUNT_TYPE_META } from '../types';
-import { useState } from 'react';
 import WhatIfButton from '../components/WhatIfButton';
 import MonthNavigator from '../components/MonthNavigator';
 
+// ──────────────────────────────────────────────────────────────────────────
+// 홈(대시보드)는 섹션 단위로 조립.
+// 각 섹션 컴포넌트는 자기 상태/스토어 구독을 자체 보유 — Dashboard 본체는
+// "어떤 섹션을 어떤 순서로 보여줄지"만 결정.
+//
+// 새 섹션 추가 절차:
+//   (1) 본 파일 아래쪽에 *Section() 컴포넌트 작성 — <section className="page-section page-section-{key}"> 로 감쌀 것
+//   (2) types.ts 의 HomeSection 유니온에 키 추가
+//   (3) /settings/home 의 ROWS 에 라벨/아이콘 등록
+//   (4) 본 컴포넌트의 렌더 트리에 토글 분기 추가
+// ──────────────────────────────────────────────────────────────────────────
 export default function Dashboard() {
+  const homeSections = useStore((s) => s.preferences.homeSections);
+  // 미설정/true 모두 표시, false 만 숨김.
+  const showGoals = homeSections.goals !== false;
+  const showAccounts = homeSections.accounts !== false;
+
+  return (
+    <div className="dashboard">
+      {showGoals && <GoalsSection />}
+      {showAccounts && <AccountsSection />}
+      {!showGoals && !showAccounts && <EmptySection />}
+      <WhatIfSection />
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 목표 섹션
+// ──────────────────────────────────────────────────────────────────────────
+function GoalsSection() {
   const navigate = useNavigate();
   const currentUserId = useStore((s) => s.currentUserId)!;
   const accounts = useStore((s) => s.accounts);
   const transactions = useStore((s) => s.transactions);
   const goals = useStore((s) => s.goals);
   const users = useStore((s) => s.users);
-  const homeSections = useStore((s) => s.preferences.homeSections);
+
   const [goalFilter, setGoalFilter] = useState<'all' | 'private' | 'family'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | '진행중' | '완료' | '실패'>('all');
-  const [month, setMonth] = useState<string>(currentMonth());
-
-  // 섹션별 표시 — 미설정/true 모두 표시, false 만 숨김.
-  const showGoals = homeSections.goals !== false;
-  const showAccounts = homeSections.accounts !== false;
-
-  const visible = visibleAccounts(currentUserId, accounts);
-  const my = visible.filter((a) => a.ownerId === currentUserId);
-  const shared = visible.filter((a) => a.ownerId !== currentUserId);
 
   const allMyGoals = visibleGoals(currentUserId, goals, users);
   const privateCount = allMyGoals.filter((g) => g.ownerType === 'user').length;
@@ -45,15 +66,11 @@ export default function Dashboard() {
       : byOwner.filter((g) => (g.status ?? '진행중') === statusFilter);
 
   return (
-    <div>
-      {showGoals && (
-        <>
+    <section className="page-section page-section-goals">
       <div className="section-title">목표</div>
+
       {allMyGoals.length > 0 && (
-        <div
-          className="row"
-          style={{ gap: 4, marginBottom: 8, flexWrap: 'wrap' }}
-        >
+        <div className="row" style={{ gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
           <button
             className={goalFilter === 'all' ? 'primary' : ''}
             style={{ fontSize: 12, padding: '4px 10px' }}
@@ -77,11 +94,9 @@ export default function Dashboard() {
           </button>
         </div>
       )}
+
       {allMyGoals.length > 0 && (
-        <div
-          className="row"
-          style={{ gap: 4, marginBottom: 8, flexWrap: 'wrap' }}
-        >
+        <div className="row" style={{ gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
           <button
             className={statusFilter === 'all' ? 'primary' : ''}
             style={{ fontSize: 12, padding: '4px 10px' }}
@@ -112,136 +127,133 @@ export default function Dashboard() {
           </button>
         </div>
       )}
+
       {allMyGoals.length === 0 && (
         <div className="empty">
           아직 목표가 없어요. 설정 → 목표에서 만들어보세요.
         </div>
       )}
       {allMyGoals.length > 0 && myGoals.length === 0 && (
-        <div className="empty">
-          이 필터에 해당하는 목표가 없어요.
-        </div>
-      )}
-      {myGoals.length > 0 && (
-        <>
-          {myGoals.map((g) => {
-            const p = goalProgress(g, accounts, transactions);
-            return (
-              <div
-                key={g.id}
-                className="goal-banner card hover"
-                onClick={() => navigate(`/goal/${g.id}`)}
-                style={{
-                  marginBottom: 8,
-                  opacity: p.status === '진행중' ? 1 : 0.65,
-                }}
-              >
-                <div className="row between" style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 16, fontWeight: 600 }}>
-                    {g.emoji ?? '🎯'} {g.name}
-                    <span
-                      className={`chip mode-${p.mode === '누적형' ? 'cumulative' : 'deductive'}`}
-                      style={{ marginLeft: 6 }}
-                    >
-                      {p.mode === '누적형' ? '📈 누적' : '📉 차감'}
-                    </span>
-                    <span
-                      className={`chip ${
-                        g.ownerType === 'family' ? 'sharing-rw' : 'sharing-private'
-                      }`}
-                      style={{ marginLeft: 4 }}
-                    >
-                      {g.ownerType === 'family' ? '👥 공유' : '🔒 개인'}
-                    </span>
-                    <span
-                      className={`chip status-${p.status === '진행중' ? 'ongoing' : p.status === '완료' ? 'done' : 'failed'}`}
-                      style={{ marginLeft: 4 }}
-                    >
-                      {p.status === '진행중' ? '🔄 진행중' : p.status === '완료' ? '✅ 완료' : '❌ 실패'}
-                    </span>
-                  </div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                    {g.startDate ? `${g.startDate} ~ ${g.targetDate}` : `목표 ${g.targetDate}`}
-                  </div>
-                </div>
-                <div className="progress" style={{ marginBottom: 8 }}>
-                  <div
-                    className={`fill ${p.mode === '차감형' ? 'blue' : ''}`}
-                    style={{ width: `${Math.min(p.ratio * 100, 100)}%` }}
-                  />
-                </div>
-                <div className="row between">
-                  <div>
-                    <span className="big-stat">{formatKRW(p.current)}</span>
-                    <span style={{ color: 'var(--text-muted)', marginLeft: 8 }}>
-                      {p.mode === '누적형'
-                        ? ` / ${formatKRW(p.target)}`
-                        : ` → ${formatKRW(p.target)}`}
-                    </span>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    {p.status === '진행중' ? (
-                      <>
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                          예상 달성
-                        </div>
-                        <div style={{ fontWeight: 600 }}>
-                          {p.estimatedMonth ?? '—'}
-                          {p.delayMonths !== null && (
-                            <span
-                              style={{
-                                marginLeft: 4,
-                                fontSize: 11,
-                                color:
-                                  p.delayMonths > 0 ? 'var(--danger)' : 'var(--accent)',
-                              }}
-                            >
-                              ({p.delayMonths > 0 ? '+' : ''}
-                              {p.delayMonths}개월)
-                            </span>
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                          상태
-                        </div>
-                        <div
-                          style={{
-                            fontWeight: 600,
-                            color:
-                              p.status === '완료' ? 'var(--accent)' : 'var(--danger)',
-                          }}
-                        >
-                          {p.status === '완료' ? '✅ 달성 완료' : '❌ 중단'}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </>
-      )}
-        </>
+        <div className="empty">이 필터에 해당하는 목표가 없어요.</div>
       )}
 
-      {showAccounts && (
-        <>
-      <div className="section-title" style={{ marginTop: showGoals ? 32 : 0 }}>계좌</div>
+      {myGoals.map((g) => {
+        const p = goalProgress(g, accounts, transactions);
+        return (
+          <div
+            key={g.id}
+            className="goal-banner card hover"
+            onClick={() => navigate(`/goal/${g.id}`)}
+            style={{
+              marginBottom: 8,
+              opacity: p.status === '진행중' ? 1 : 0.65,
+            }}
+          >
+            <div className="row between" style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 16, fontWeight: 600 }}>
+                {g.emoji ?? '🎯'} {g.name}
+                <span
+                  className={`chip mode-${p.mode === '누적형' ? 'cumulative' : 'deductive'}`}
+                  style={{ marginLeft: 6 }}
+                >
+                  {p.mode === '누적형' ? '📈 누적' : '📉 차감'}
+                </span>
+                <span
+                  className={`chip ${
+                    g.ownerType === 'family' ? 'sharing-rw' : 'sharing-private'
+                  }`}
+                  style={{ marginLeft: 4 }}
+                >
+                  {g.ownerType === 'family' ? '👥 공유' : '🔒 개인'}
+                </span>
+                <span
+                  className={`chip status-${p.status === '진행중' ? 'ongoing' : p.status === '완료' ? 'done' : 'failed'}`}
+                  style={{ marginLeft: 4 }}
+                >
+                  {p.status === '진행중' ? '🔄 진행중' : p.status === '완료' ? '✅ 완료' : '❌ 실패'}
+                </span>
+              </div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                {g.startDate ? `${g.startDate} ~ ${g.targetDate}` : `목표 ${g.targetDate}`}
+              </div>
+            </div>
+            <div className="progress" style={{ marginBottom: 8 }}>
+              <div
+                className={`fill ${p.mode === '차감형' ? 'blue' : ''}`}
+                style={{ width: `${Math.min(p.ratio * 100, 100)}%` }}
+              />
+            </div>
+            <div className="row between">
+              <div>
+                <span className="big-stat">{formatKRW(p.current)}</span>
+                <span style={{ color: 'var(--text-muted)', marginLeft: 8 }}>
+                  {p.mode === '누적형'
+                    ? ` / ${formatKRW(p.target)}`
+                    : ` → ${formatKRW(p.target)}`}
+                </span>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                {p.status === '진행중' ? (
+                  <>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>예상 달성</div>
+                    <div style={{ fontWeight: 600 }}>
+                      {p.estimatedMonth ?? '—'}
+                      {p.delayMonths !== null && (
+                        <span
+                          style={{
+                            marginLeft: 4,
+                            fontSize: 11,
+                            color: p.delayMonths > 0 ? 'var(--danger)' : 'var(--accent)',
+                          }}
+                        >
+                          ({p.delayMonths > 0 ? '+' : ''}
+                          {p.delayMonths}개월)
+                        </span>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>상태</div>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        color: p.status === '완료' ? 'var(--accent)' : 'var(--danger)',
+                      }}
+                    >
+                      {p.status === '완료' ? '✅ 달성 완료' : '❌ 중단'}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 계좌 섹션 — 월 네비 + 내 계좌 + 공유받은 계좌
+// ──────────────────────────────────────────────────────────────────────────
+function AccountsSection() {
+  const navigate = useNavigate();
+  const currentUserId = useStore((s) => s.currentUserId)!;
+  const accounts = useStore((s) => s.accounts);
+  const transactions = useStore((s) => s.transactions);
+  const [month, setMonth] = useState<string>(currentMonth());
+
+  const visible = visibleAccounts(currentUserId, accounts);
+  const my = visible.filter((a) => a.ownerId === currentUserId);
+  const shared = visible.filter((a) => a.ownerId !== currentUserId);
+
+  return (
+    <section className="page-section page-section-accounts">
+      <div className="section-title">계좌</div>
       <MonthNavigator month={month} onChange={setMonth} />
-      <div
-        style={{
-          fontSize: 12,
-          color: 'var(--text-muted)',
-          fontWeight: 600,
-          margin: '4px 0 6px',
-        }}
-      >
-        내 계좌
-      </div>
+
+      <div className="page-subtitle">내 계좌</div>
       {my.length === 0 && <div className="empty">아직 계좌가 없어요.</div>}
       {my.map((a) => (
         <AccountCard
@@ -256,16 +268,7 @@ export default function Dashboard() {
 
       {shared.length > 0 && (
         <>
-          <div
-            style={{
-              fontSize: 12,
-              color: 'var(--text-muted)',
-              fontWeight: 600,
-              margin: '16px 0 6px',
-            }}
-          >
-            공유받은 계좌
-          </div>
+          <div className="page-subtitle page-subtitle-spaced">공유받은 계좌</div>
           {shared.map((a) => (
             <AccountCard
               key={a.id}
@@ -279,25 +282,40 @@ export default function Dashboard() {
           ))}
         </>
       )}
-        </>
-      )}
-
-      {!showGoals && !showAccounts && (
-        <div className="empty" style={{ padding: 32 }}>
-          홈에 표시할 섹션이 모두 꺼져 있어요.
-          <div style={{ marginTop: 8, fontSize: 12 }}>
-            설정 → 홈 화면에서 다시 켜주세요.
-          </div>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', gap: 8, marginTop: 24 }}>
-        <WhatIfButton />
-      </div>
-    </div>
+    </section>
   );
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// What-if 섹션
+// ──────────────────────────────────────────────────────────────────────────
+function WhatIfSection() {
+  return (
+    <section className="page-section page-section-whatif">
+      <WhatIfButton />
+    </section>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 모든 토글 섹션이 꺼져 있을 때 표시할 안내
+// ──────────────────────────────────────────────────────────────────────────
+function EmptySection() {
+  return (
+    <section className="page-section page-section-empty">
+      <div className="empty" style={{ padding: 32 }}>
+        홈에 표시할 섹션이 모두 꺼져 있어요.
+        <div style={{ marginTop: 8, fontSize: 12 }}>
+          설정 → 홈 화면에서 다시 켜주세요.
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 계좌 카드 — AccountsSection 내부 헬퍼
+// ──────────────────────────────────────────────────────────────────────────
 function AccountCard({
   account,
   month,

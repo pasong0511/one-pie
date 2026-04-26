@@ -360,6 +360,15 @@
 - 아이콘으로 **mode와 sharing** 빠르게 식별 (🔒 private / 🔗 shared-rw / 👁 shared-r)
 - 카드 클릭 → 계좌 상세(7.3)
 
+**구현 구조 (DOM)**: 모든 페이지가 동일 패턴 — 본체는 thin orchestrator, 각 기능은 자기 상태/데이터를 자체 구독하는 `<section className="page-section page-section-{key}">` 컴포넌트. 인접 섹션 간 간격 32px (`.page-section + .page-section`). 페이지마다 별도 토글 가능 섹션과 항상 표시 섹션을 가짐:
+
+- **Dashboard** (`HomeSection`): `goals`(토글) / `accounts`(토글) / `whatif`(항상) / `empty`(둘 다 꺼졌을 때)
+- **Accounts** (`AccountsSection`): MonthNavigator(항상, 페이지 헤더) / `mine`(토글) / `shared`(토글, 자동 숨김도 함께) / `empty`
+- **Calendar** (`CalendarSection`): MonthNavigator(항상) / `toolbar`(`viewToggle` + `search` 둘 중 하나라도 켜져 있으면) / `content`(항상, list/calendar view)
+- **Stats** (`StatsSection`): MonthNavigator + range 토글(항상) / `summary` / `monthly` / `net` / `category` / `accountType` / `activeGoals`(모두 토글) / `empty`
+
+신규 섹션 추가 절차: (1) `*Section()` 컴포넌트 작성 → `<section className="page-section page-section-{key}">` 로 감싸기, (2) `types.ts` 의 해당 페이지 `*Section` 유니온에 키 추가, (3) `/settings/{page}-view` ROWS 에 라벨 등록, (4) 페이지 본체 렌더 트리에 토글 분기 추가.
+
 ---
 
 ### 7.3 계좌 상세 — 차감형
@@ -650,8 +659,8 @@
 ```
 
 - 라우트
-  - `/settings` : 메뉴 리스트 (프로필 카드 + 항목 리스트)
-  - `/settings/home` : 홈 화면 섹션 토글 (목표/계좌). `Preferences.homeSections[key] !== false` 면 표시. false 일 때 빈 상태도 함께 숨김.
+  - `/settings` : 메뉴 리스트 (프로필 카드 + **3 그룹**: 화면 표시 / 데이터 / 기타). 그룹 헤더는 `.settings-group-title`.
+  - `/settings/home` · `/settings/accounts-view` · `/settings/calendar-view` · `/settings/stats-view` : 페이지별 섹션 토글. 각각 `Preferences.{home,accounts,calendar,stats}Sections[key] !== false` 면 표시. false 만 숨김 (빈 상태 포함).
   - `/settings/accounts` : 내 계좌 관리 (드래그 정렬, 열기/속성, + 새 계좌)
   - `/settings/goals` : 목표 관리 (열기/편집, + 새 목표)
   - `/settings/recurring` : 반복 거래 규칙 (편집, + 새 규칙, 🔄 지금 적용)
@@ -700,13 +709,19 @@
        ├→ 목표 상세(7.5)              │
        ├→ 이 소비 괜찮을까(7.6) ──────┘
        └→ 설정(7.9)
-            ├→ 홈 화면 (/settings/home)
-            ├→ 내 계좌 (/settings/accounts)
-            ├→ 목표 (/settings/goals)
-            ├→ 반복 거래 (/settings/recurring)
-            ├→ 카테고리 (/settings/categories)
-            ├→ 가족 (/settings/family)
-            └→ 개발자 (/settings/developer)
+            ├ 화면 표시
+            │   ├→ 홈 화면 (/settings/home)
+            │   ├→ 계좌 화면 (/settings/accounts-view)
+            │   ├→ 거래 화면 (/settings/calendar-view)
+            │   └→ 통계 화면 (/settings/stats-view)
+            ├ 데이터
+            │   ├→ 내 계좌 (/settings/accounts)
+            │   ├→ 목표 (/settings/goals)
+            │   ├→ 반복 거래 (/settings/recurring)
+            │   └→ 카테고리 (/settings/categories)
+            └ 기타
+                ├→ 가족 (/settings/family)
+                └→ 개발자 (/settings/developer)
 ```
 
 ---

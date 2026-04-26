@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Bar,
   BarChart,
@@ -49,85 +48,28 @@ const PIE_COLORS = [
   '#9333ea',
 ];
 
+// ──────────────────────────────────────────────────────────────────────────
+// 통계 페이지 — 본체는 thin orchestrator. range 토글 + MonthNavigator 는
+// 페이지 전역 헤더, 그 아래에 차트별 토글 가능한 섹션 배치.
+// 각 차트 섹션은 자기 데이터 계산을 자체 useMemo 로 보유.
+// ──────────────────────────────────────────────────────────────────────────
 export default function Stats() {
-  const navigate = useNavigate();
-  const currentUserId = useStore((s) => s.currentUserId)!;
-  const accounts = useStore((s) => s.accounts);
-  const transactions = useStore((s) => s.transactions);
-  const goals = useStore((s) => s.goals);
-  const uncategorizedLabel = useStore((s) => s.preferences.uncategorizedLabel);
+  const statsSections = useStore((s) => s.preferences.statsSections);
+  const showSummary = statsSections.summary !== false;
+  const showMonthly = statsSections.monthly !== false;
+  const showNet = statsSections.net !== false;
+  const showCategory = statsSections.category !== false;
+  const showAccountType = statsSections.accountType !== false;
+  const showActiveGoals = statsSections.activeGoals !== false;
+
   const [range, setRange] = useState<6 | 12>(6);
   const [month, setMonth] = useState<string>(currentMonth());
 
-  const visibleAccs = useMemo(
-    () => visibleAccounts(currentUserId, accounts),
-    [currentUserId, accounts],
-  );
-  const visibleIds = useMemo(() => new Set(visibleAccs.map((a) => a.id)), [visibleAccs]);
-  const myTxs = useMemo(
-    () => transactions.filter((t) => visibleIds.has(t.accountId)),
-    [transactions, visibleIds],
-  );
-
-  // 최근 N개월 수입/지출/순익
-  const monthly: MonthRow[] = useMemo(() => {
-    const rows: MonthRow[] = [];
-    for (let i = range - 1; i >= 0; i--) {
-      const m = addMonths(month, -i);
-      const txs = myTxs.filter((t) => t.date.startsWith(m));
-      const income = txs.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0);
-      const expense = txs.filter((t) => t.amount < 0).reduce((s, t) => s - t.amount, 0);
-      rows.push({
-        month: m,
-        label: m.slice(5) + '월',
-        income,
-        expense,
-        net: income - expense,
-      });
-    }
-    return rows;
-  }, [myTxs, month, range]);
-
-  const thisMonth = monthly[monthly.length - 1];
-  const net = thisMonth.net;
-  const savingsRate = thisMonth.income > 0 ? (net / thisMonth.income) * 100 : 0;
-
-  // 이번 달 카테고리별 지출
-  const categoryData = useMemo(() => {
-    const m: Record<string, number> = {};
-    const thisMonthExpenses = myTxs.filter(
-      (t) => t.date.startsWith(month) && t.amount < 0,
-    );
-    for (const t of thisMonthExpenses) {
-      const cat = t.category ?? uncategorizedLabel;
-      m[cat] = (m[cat] ?? 0) + -t.amount;
-    }
-    return Object.entries(m)
-      .map(([name, amount]) => ({ name, amount }))
-      .sort((a, b) => b.amount - a.amount);
-  }, [myTxs, month, uncategorizedLabel]);
-
-  const totalExpense = categoryData.reduce((s, d) => s + d.amount, 0);
-
-  // 결제 수단(type)별 지출
-  const byAccountType = useMemo(() => {
-    const m: Record<string, { income: number; expense: number }> = {};
-    const thisMonthTxs = myTxs.filter((t) => t.date.startsWith(month));
-    for (const t of thisMonthTxs) {
-      const acc = accounts.find((a) => a.id === t.accountId);
-      const key = acc?.type ?? '계좌';
-      if (!m[key]) m[key] = { income: 0, expense: 0 };
-      if (t.amount > 0) m[key].income += t.amount;
-      else m[key].expense += -t.amount;
-    }
-    return Object.entries(m).map(([type, v]) => ({ type, ...v }));
-  }, [myTxs, accounts, month]);
-
-  // 목표
-  const activeGoals = goals.filter((g) => (g.status ?? '진행중') === '진행중');
+  const anyOn =
+    showSummary || showMonthly || showNet || showCategory || showAccountType || showActiveGoals;
 
   return (
-    <div>
+    <div className="stats-page">
       <div className="row between" style={{ marginBottom: 8 }}>
         <div />
         <div className="row" style={{ gap: 4 }}>
@@ -150,11 +92,60 @@ export default function Stats() {
 
       <MonthNavigator month={month} onChange={setMonth} />
 
-      {/* 요약 카드 */}
+      {showSummary && <SummarySection month={month} />}
+      {showMonthly && <MonthlySection month={month} range={range} />}
+      {showNet && <NetSection month={month} range={range} />}
+      {showCategory && <CategorySection month={month} />}
+      {showAccountType && <AccountTypeSection month={month} />}
+      {showActiveGoals && <ActiveGoalsSection />}
+      {!anyOn && <EmptySection />}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 공용 hook — 사용자가 볼 수 있는 거래 (visibleAccounts 기반)
+// ──────────────────────────────────────────────────────────────────────────
+function useMyTxs() {
+  const currentUserId = useStore((s) => s.currentUserId)!;
+  const accounts = useStore((s) => s.accounts);
+  const transactions = useStore((s) => s.transactions);
+
+  const visibleAccs = useMemo(
+    () => visibleAccounts(currentUserId, accounts),
+    [currentUserId, accounts],
+  );
+  const visibleIds = useMemo(() => new Set(visibleAccs.map((a) => a.id)), [visibleAccs]);
+  return useMemo(
+    () => transactions.filter((t) => visibleIds.has(t.accountId)),
+    [transactions, visibleIds],
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 월별 요약 카드
+// ──────────────────────────────────────────────────────────────────────────
+function SummarySection({ month }: { month: string }) {
+  const myTxs = useMyTxs();
+  const thisMonthTxs = useMemo(
+    () => myTxs.filter((t) => t.date.startsWith(month)),
+    [myTxs, month],
+  );
+  const income = thisMonthTxs
+    .filter((t) => t.amount > 0)
+    .reduce((s, t) => s + t.amount, 0);
+  const expense = thisMonthTxs
+    .filter((t) => t.amount < 0)
+    .reduce((s, t) => s - t.amount, 0);
+  const net = income - expense;
+  const savingsRate = income > 0 ? (net / income) * 100 : 0;
+
+  return (
+    <section className="page-section page-section-stat page-section-summary">
       <div className="section-title">월별 요약</div>
       <div className="stat-grid">
-        <StatCard label="총 수입" value={formatKRW(thisMonth.income)} color={COLOR.accent} />
-        <StatCard label="총 지출" value={formatKRW(thisMonth.expense)} color={COLOR.danger} />
+        <StatCard label="총 수입" value={formatKRW(income)} color={COLOR.accent} />
+        <StatCard label="총 지출" value={formatKRW(expense)} color={COLOR.danger} />
         <StatCard
           label="순이익"
           value={`${net >= 0 ? '+' : ''}${formatKRW(net)}`}
@@ -166,8 +157,32 @@ export default function Stats() {
           color={savingsRate >= 30 ? COLOR.accent : savingsRate >= 0 ? COLOR.warn : COLOR.danger}
         />
       </div>
+    </section>
+  );
+}
 
-      {/* 월별 수입 vs 지출 */}
+// ──────────────────────────────────────────────────────────────────────────
+// 최근 N개월 수입 vs 지출 (Bar)
+// ──────────────────────────────────────────────────────────────────────────
+function useMonthlyRows(month: string, range: 6 | 12): MonthRow[] {
+  const myTxs = useMyTxs();
+  return useMemo(() => {
+    const rows: MonthRow[] = [];
+    for (let i = range - 1; i >= 0; i--) {
+      const m = addMonths(month, -i);
+      const txs = myTxs.filter((t) => t.date.startsWith(m));
+      const income = txs.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+      const expense = txs.filter((t) => t.amount < 0).reduce((s, t) => s - t.amount, 0);
+      rows.push({ month: m, label: m.slice(5) + '월', income, expense, net: income - expense });
+    }
+    return rows;
+  }, [myTxs, month, range]);
+}
+
+function MonthlySection({ month, range }: { month: string; range: 6 | 12 }) {
+  const monthly = useMonthlyRows(month, range);
+  return (
+    <section className="page-section page-section-stat page-section-monthly">
       <div className="section-title">최근 {range}개월 수입 vs 지출</div>
       <div className="card">
         <div className="chart-box">
@@ -192,8 +207,17 @@ export default function Stats() {
           </ResponsiveContainer>
         </div>
       </div>
+    </section>
+  );
+}
 
-      {/* 순이익 추이 */}
+// ──────────────────────────────────────────────────────────────────────────
+// 순이익 추이 (Line)
+// ──────────────────────────────────────────────────────────────────────────
+function NetSection({ month, range }: { month: string; range: 6 | 12 }) {
+  const monthly = useMonthlyRows(month, range);
+  return (
+    <section className="page-section page-section-stat page-section-net">
       <div className="section-title">순이익 추이</div>
       <div className="card">
         <div className="chart-box" style={{ height: 200 }}>
@@ -224,8 +248,34 @@ export default function Stats() {
           </ResponsiveContainer>
         </div>
       </div>
+    </section>
+  );
+}
 
-      {/* 카테고리별 지출 — 도넛 */}
+// ──────────────────────────────────────────────────────────────────────────
+// 카테고리별 지출 (Donut)
+// ──────────────────────────────────────────────────────────────────────────
+function CategorySection({ month }: { month: string }) {
+  const myTxs = useMyTxs();
+  const uncategorizedLabel = useStore((s) => s.preferences.uncategorizedLabel);
+
+  const categoryData = useMemo(() => {
+    const m: Record<string, number> = {};
+    const thisMonthExpenses = myTxs.filter(
+      (t) => t.date.startsWith(month) && t.amount < 0,
+    );
+    for (const t of thisMonthExpenses) {
+      const cat = t.category ?? uncategorizedLabel;
+      m[cat] = (m[cat] ?? 0) + -t.amount;
+    }
+    return Object.entries(m)
+      .map(([name, amount]) => ({ name, amount }))
+      .sort((a, b) => b.amount - a.amount);
+  }, [myTxs, month, uncategorizedLabel]);
+  const totalExpense = categoryData.reduce((s, d) => s + d.amount, 0);
+
+  return (
+    <section className="page-section page-section-stat page-section-category">
       <div className="section-title">카테고리별 지출</div>
       <div className="card">
         {categoryData.length === 0 ? (
@@ -280,8 +330,31 @@ export default function Stats() {
           </>
         )}
       </div>
+    </section>
+  );
+}
 
-      {/* 결제 수단별 지출 막대 */}
+// ──────────────────────────────────────────────────────────────────────────
+// 결제 수단별 지출 (vertical Bar)
+// ──────────────────────────────────────────────────────────────────────────
+function AccountTypeSection({ month }: { month: string }) {
+  const myTxs = useMyTxs();
+  const accounts = useStore((s) => s.accounts);
+  const byAccountType = useMemo(() => {
+    const m: Record<string, { income: number; expense: number }> = {};
+    const thisMonthTxs = myTxs.filter((t) => t.date.startsWith(month));
+    for (const t of thisMonthTxs) {
+      const acc = accounts.find((a) => a.id === t.accountId);
+      const key = acc?.type ?? '계좌';
+      if (!m[key]) m[key] = { income: 0, expense: 0 };
+      if (t.amount > 0) m[key].income += t.amount;
+      else m[key].expense += -t.amount;
+    }
+    return Object.entries(m).map(([type, v]) => ({ type, ...v }));
+  }, [myTxs, accounts, month]);
+
+  return (
+    <section className="page-section page-section-stat page-section-account-type">
       <div className="section-title">결제 수단별 지출</div>
       <div className="card">
         {byAccountType.length === 0 ? (
@@ -316,59 +389,82 @@ export default function Stats() {
           </div>
         )}
       </div>
+    </section>
+  );
+}
 
-      {/* 진행 중 목표 진행률 */}
-      {activeGoals.length > 0 && (
-        <>
-          <div className="section-title">진행 중 목표</div>
-          <div className="card">
-            <div className="stack" style={{ gap: 12 }}>
-              {activeGoals.map((g) => {
-                const target = g.targetAmount;
-                const start = g.startAmount ?? 0;
-                const linkedAccounts = accounts.filter((a) =>
-                  g.linkedAccountIds.includes(a.id),
-                );
-                let current = start;
-                for (const a of linkedAccounts) {
-                  const init = a.initialBalance ?? 0;
-                  const sum = transactions
-                    .filter((t) => t.accountId === a.id)
-                    .reduce((s, t) => s + t.amount, 0);
-                  current += init + sum;
-                }
-                const ratio =
-                  target === start
-                    ? 1
-                    : Math.max(0, Math.min(1, (current - start) / (target - start)));
-                return (
-                  <div key={g.id}>
-                    <div
-                      className="row between"
-                      style={{ fontSize: 13, marginBottom: 4 }}
-                    >
-                      <span>
-                        {g.emoji ?? '🎯'} {g.name}
-                      </span>
-                      <span style={{ color: 'var(--text-muted)' }}>
-                        {formatCompact(current)} / {formatCompact(target)} ({(ratio * 100).toFixed(0)}
-                        %)
-                      </span>
-                    </div>
-                    <div className="progress">
-                      <div
-                        className={`fill ${g.mode === '차감형' ? 'blue' : ''}`}
-                        style={{ width: `${ratio * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
+// ──────────────────────────────────────────────────────────────────────────
+// 진행 중 목표 진행률
+// ──────────────────────────────────────────────────────────────────────────
+function ActiveGoalsSection() {
+  const goals = useStore((s) => s.goals);
+  const accounts = useStore((s) => s.accounts);
+  const transactions = useStore((s) => s.transactions);
+  const activeGoals = goals.filter((g) => (g.status ?? '진행중') === '진행중');
+
+  if (activeGoals.length === 0) return null;
+
+  return (
+    <section className="page-section page-section-stat page-section-active-goals">
+      <div className="section-title">진행 중 목표</div>
+      <div className="card">
+        <div className="stack" style={{ gap: 12 }}>
+          {activeGoals.map((g) => {
+            const target = g.targetAmount;
+            const start = g.startAmount ?? 0;
+            const linkedAccounts = accounts.filter((a) =>
+              g.linkedAccountIds.includes(a.id),
+            );
+            let current = start;
+            for (const a of linkedAccounts) {
+              const init = a.initialBalance ?? 0;
+              const sum = transactions
+                .filter((t) => t.accountId === a.id)
+                .reduce((s, t) => s + t.amount, 0);
+              current += init + sum;
+            }
+            const ratio =
+              target === start
+                ? 1
+                : Math.max(0, Math.min(1, (current - start) / (target - start)));
+            return (
+              <div key={g.id}>
+                <div className="row between" style={{ fontSize: 13, marginBottom: 4 }}>
+                  <span>
+                    {g.emoji ?? '🎯'} {g.name}
+                  </span>
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    {formatCompact(current)} / {formatCompact(target)} ({(ratio * 100).toFixed(0)}%)
+                  </span>
+                </div>
+                <div className="progress">
+                  <div
+                    className={`fill ${g.mode === '차감형' ? 'blue' : ''}`}
+                    style={{ width: `${ratio * 100}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 모든 토글 섹션이 꺼져 있을 때 안내
+// ──────────────────────────────────────────────────────────────────────────
+function EmptySection() {
+  return (
+    <section className="page-section page-section-empty">
+      <div className="empty" style={{ padding: 32 }}>
+        통계 페이지에 표시할 섹션이 모두 꺼져 있어요.
+        <div style={{ marginTop: 8, fontSize: 12 }}>
+          설정 → 통계 화면에서 다시 켜주세요.
+        </div>
+      </div>
+    </section>
   );
 }
 

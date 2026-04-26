@@ -371,6 +371,18 @@ export const useStore = create<Store>()(
               ...s.preferences.homeSections,
               ...(patch.homeSections ?? {}),
             },
+            accountsSections: {
+              ...s.preferences.accountsSections,
+              ...(patch.accountsSections ?? {}),
+            },
+            calendarSections: {
+              ...s.preferences.calendarSections,
+              ...(patch.calendarSections ?? {}),
+            },
+            statsSections: {
+              ...s.preferences.statsSections,
+              ...(patch.statsSections ?? {}),
+            },
           },
         })),
 
@@ -573,13 +585,11 @@ export const useStore = create<Store>()(
               txRequired: {},
             };
           }
-          // 옛 persist 데이터에 homeSections 필드가 없을 수 있음.
-          if (!merged.preferences.homeSections) {
-            merged.preferences = {
-              ...merged.preferences,
-              homeSections: {},
-            };
-          }
+          // 옛 persist 데이터에 신규 필드(*Sections 등)가 누락됐을 수 있음 → 기본값 주입.
+          merged.preferences = {
+            ...DEFAULT_PREFERENCES,
+            ...merged.preferences,
+          };
         }
         return merged;
       },

@@ -6,31 +6,45 @@ import { formatKRW, currentMonth } from '../utils/format';
 import { Account, ACCOUNT_TYPE_META } from '../types';
 import MonthNavigator from '../components/MonthNavigator';
 
+// ──────────────────────────────────────────────────────────────────────────
+// 계좌 페이지 — 본체는 thin orchestrator. MonthNavigator 는 페이지 전역 헤더
+// (모든 섹션이 같은 month 컨텍스트를 공유), 그 아래에 토글 가능한 섹션 배치.
+// ──────────────────────────────────────────────────────────────────────────
 export default function Accounts() {
+  const accountsSections = useStore((s) => s.preferences.accountsSections);
+  const showMine = accountsSections.mine !== false;
+  const showShared = accountsSections.shared !== false;
+
+  const [month, setMonth] = useState<string>(currentMonth());
+
+  return (
+    <div className="accounts-page">
+      <div className="section-title">계좌</div>
+      <MonthNavigator month={month} onChange={setMonth} />
+
+      {showMine && <MyAccountsSection month={month} />}
+      {showShared && <SharedAccountsSection month={month} />}
+      {!showMine && !showShared && <EmptySection />}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 내 계좌 섹션
+// ──────────────────────────────────────────────────────────────────────────
+function MyAccountsSection({ month }: { month: string }) {
   const navigate = useNavigate();
   const currentUserId = useStore((s) => s.currentUserId)!;
   const accounts = useStore((s) => s.accounts);
   const transactions = useStore((s) => s.transactions);
-  const [month, setMonth] = useState<string>(currentMonth());
 
-  const visible = visibleAccounts(currentUserId, accounts);
-  const my = visible.filter((a) => a.ownerId === currentUserId);
-  const shared = visible.filter((a) => a.ownerId !== currentUserId);
+  const my = visibleAccounts(currentUserId, accounts).filter(
+    (a) => a.ownerId === currentUserId,
+  );
 
   return (
-    <div>
-      <div className="section-title">계좌</div>
-      <MonthNavigator month={month} onChange={setMonth} />
-      <div
-        style={{
-          fontSize: 12,
-          color: 'var(--text-muted)',
-          fontWeight: 600,
-          margin: '4px 0 6px',
-        }}
-      >
-        내 계좌
-      </div>
+    <section className="page-section page-section-mine">
+      <div className="page-subtitle">내 계좌</div>
       {my.length === 0 && <div className="empty">아직 계좌가 없어요.</div>}
       {my.map((a) => (
         <AccountCard
@@ -42,36 +56,62 @@ export default function Accounts() {
           transactions={transactions}
         />
       ))}
-
-      {shared.length > 0 && (
-        <>
-          <div
-            style={{
-              fontSize: 12,
-              color: 'var(--text-muted)',
-              fontWeight: 600,
-              margin: '16px 0 6px',
-            }}
-          >
-            공유받은 계좌
-          </div>
-          {shared.map((a) => (
-            <AccountCard
-              key={a.id}
-              account={a}
-              month={month}
-              onClick={() => navigate(`/account/${a.id}`, { state: { month } })}
-              accounts={accounts}
-              transactions={transactions}
-              sharedFromLabel
-            />
-          ))}
-        </>
-      )}
-    </div>
+    </section>
   );
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// 공유받은 계좌 섹션
+// ──────────────────────────────────────────────────────────────────────────
+function SharedAccountsSection({ month }: { month: string }) {
+  const navigate = useNavigate();
+  const currentUserId = useStore((s) => s.currentUserId)!;
+  const accounts = useStore((s) => s.accounts);
+  const transactions = useStore((s) => s.transactions);
+
+  const shared = visibleAccounts(currentUserId, accounts).filter(
+    (a) => a.ownerId !== currentUserId,
+  );
+
+  if (shared.length === 0) return null;
+
+  return (
+    <section className="page-section page-section-shared">
+      <div className="page-subtitle">공유받은 계좌</div>
+      {shared.map((a) => (
+        <AccountCard
+          key={a.id}
+          account={a}
+          month={month}
+          onClick={() => navigate(`/account/${a.id}`, { state: { month } })}
+          accounts={accounts}
+          transactions={transactions}
+          sharedFromLabel
+        />
+      ))}
+    </section>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 모든 토글 섹션이 꺼져 있을 때 안내
+// ──────────────────────────────────────────────────────────────────────────
+function EmptySection() {
+  return (
+    <section className="page-section page-section-empty">
+      <div className="empty" style={{ padding: 32 }}>
+        계좌 페이지에 표시할 섹션이 모두 꺼져 있어요.
+        <div style={{ marginTop: 8, fontSize: 12 }}>
+          설정 → 계좌 화면에서 다시 켜주세요.
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 계좌 카드 (Dashboard와 동일 — 추후 공통 컴포넌트로 빼는 후보)
+// ──────────────────────────────────────────────────────────────────────────
 function AccountCard({
   account,
   month,
