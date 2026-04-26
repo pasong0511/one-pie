@@ -28,7 +28,21 @@ export default function Settings() {
   const expenseMains = taxonomy.filter((m) => m.kind === 'expense').length;
   const incomeMains = taxonomy.filter((m) => m.kind === 'income').length;
 
+  const homeSections = useStore((s) => s.preferences.homeSections);
+  const hiddenHome = (['goals', 'accounts'] as const).filter(
+    (k) => homeSections[k] === false,
+  );
+
   const items: MenuItem[] = [
+    {
+      to: '/settings/home',
+      icon: '🏠',
+      label: '홈 화면',
+      sublabel:
+        hiddenHome.length === 0
+          ? '모두 표시'
+          : `${hiddenHome.map((k) => (k === 'goals' ? '목표' : '계좌')).join(', ')} 숨김`,
+    },
     {
       to: '/settings/accounts',
       icon: '💳',

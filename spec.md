@@ -651,6 +651,7 @@
 
 - 라우트
   - `/settings` : 메뉴 리스트 (프로필 카드 + 항목 리스트)
+  - `/settings/home` : 홈 화면 섹션 토글 (목표/계좌). `Preferences.homeSections[key] !== false` 면 표시. false 일 때 빈 상태도 함께 숨김.
   - `/settings/accounts` : 내 계좌 관리 (드래그 정렬, 열기/속성, + 새 계좌)
   - `/settings/goals` : 목표 관리 (열기/편집, + 새 목표)
   - `/settings/recurring` : 반복 거래 규칙 (편집, + 새 규칙, 🔄 지금 적용)
@@ -699,6 +700,7 @@
        ├→ 목표 상세(7.5)              │
        ├→ 이 소비 괜찮을까(7.6) ──────┘
        └→ 설정(7.9)
+            ├→ 홈 화면 (/settings/home)
             ├→ 내 계좌 (/settings/accounts)
             ├→ 목표 (/settings/goals)
             ├→ 반복 거래 (/settings/recurring)

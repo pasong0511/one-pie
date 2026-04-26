@@ -367,6 +367,10 @@ export const useStore = create<Store>()(
               ...s.preferences.txRequired,
               ...(patch.txRequired ?? {}),
             },
+            homeSections: {
+              ...s.preferences.homeSections,
+              ...(patch.homeSections ?? {}),
+            },
           },
         })),
 
@@ -567,6 +571,13 @@ export const useStore = create<Store>()(
             merged.preferences = {
               ...merged.preferences,
               txRequired: {},
+            };
+          }
+          // 옛 persist 데이터에 homeSections 필드가 없을 수 있음.
+          if (!merged.preferences.homeSections) {
+            merged.preferences = {
+              ...merged.preferences,
+              homeSections: {},
             };
           }
         }

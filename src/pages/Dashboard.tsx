@@ -14,9 +14,14 @@ export default function Dashboard() {
   const transactions = useStore((s) => s.transactions);
   const goals = useStore((s) => s.goals);
   const users = useStore((s) => s.users);
+  const homeSections = useStore((s) => s.preferences.homeSections);
   const [goalFilter, setGoalFilter] = useState<'all' | 'private' | 'family'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | '진행중' | '완료' | '실패'>('all');
   const [month, setMonth] = useState<string>(currentMonth());
+
+  // 섹션별 표시 — 미설정/true 모두 표시, false 만 숨김.
+  const showGoals = homeSections.goals !== false;
+  const showAccounts = homeSections.accounts !== false;
 
   const visible = visibleAccounts(currentUserId, accounts);
   const my = visible.filter((a) => a.ownerId === currentUserId);
@@ -41,6 +46,8 @@ export default function Dashboard() {
 
   return (
     <div>
+      {showGoals && (
+        <>
       <div className="section-title">목표</div>
       {allMyGoals.length > 0 && (
         <div
@@ -218,8 +225,12 @@ export default function Dashboard() {
           })}
         </>
       )}
+        </>
+      )}
 
-      <div className="section-title" style={{ marginTop: 32 }}>계좌</div>
+      {showAccounts && (
+        <>
+      <div className="section-title" style={{ marginTop: showGoals ? 32 : 0 }}>계좌</div>
       <MonthNavigator month={month} onChange={setMonth} />
       <div
         style={{
@@ -267,6 +278,17 @@ export default function Dashboard() {
             />
           ))}
         </>
+      )}
+        </>
+      )}
+
+      {!showGoals && !showAccounts && (
+        <div className="empty" style={{ padding: 32 }}>
+          홈에 표시할 섹션이 모두 꺼져 있어요.
+          <div style={{ marginTop: 8, fontSize: 12 }}>
+            설정 → 홈 화면에서 다시 켜주세요.
+          </div>
+        </div>
       )}
 
       <div style={{ display: 'flex', gap: 8, marginTop: 24 }}>

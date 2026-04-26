@@ -14,6 +14,7 @@ import SettingsRecurring from './pages/settings/Recurring';
 import SettingsFamily from './pages/settings/Family';
 import SettingsDeveloper from './pages/settings/Developer';
 import SettingsCategories from './pages/settings/Categories';
+import SettingsHome from './pages/settings/Home';
 import Calendar from './pages/Calendar';
 import Transaction from './pages/Transaction';
 import LowBalanceToast from './components/LowBalanceToast';
@@ -150,6 +151,7 @@ export default function App() {
           }
         />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/settings/home" element={<SettingsHome />} />
         <Route path="/settings/accounts" element={<SettingsAccounts />} />
         <Route path="/settings/goals" element={<SettingsGoals />} />
         <Route path="/settings/recurring" element={<SettingsRecurring />} />
