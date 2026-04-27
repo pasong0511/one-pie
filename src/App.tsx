@@ -20,6 +20,8 @@ import SettingsCalendarView from './pages/settings/CalendarView';
 import SettingsStatsView from './pages/settings/StatsView';
 import Calendar from './pages/Calendar';
 import Transaction from './pages/Transaction';
+import Settle from './pages/Settle';
+import SettleDetail from './pages/SettleDetail';
 import LowBalanceToast from './components/LowBalanceToast';
 import GlobalTxButton from './components/GlobalTxButton';
 import BottomNav from './components/BottomNav';
@@ -144,6 +146,8 @@ export default function App() {
         <Route path="/goal/:id" element={<GoalDetail />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/tx/:id" element={<Transaction />} />
+        <Route path="/settle" element={<Settle />} />
+        <Route path="/settle/:id" element={<SettleDetail />} />
         <Route path="/what-if" element={<WhatIf />} />
         <Route
           path="/stats"

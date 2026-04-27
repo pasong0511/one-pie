@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Account, MainCategory, Transaction, User } from '../types';
+import { Account, MainCategory, splitBillStatusMeta, SplitBill, Transaction, User } from '../types';
+import { useStore } from '../store';
 import { formatKRW } from '../utils/format';
 import { formatCategoryPath } from '../utils/category';
 
@@ -20,6 +21,7 @@ export default function TransactionSearchModal({
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
+  const splitBills: SplitBill[] = useStore((s) => s.splitBills);
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -141,11 +143,29 @@ export default function TransactionSearchModal({
                 <div className="tx-search-row-body">
                   <div className="tx-search-row-title">
                     {catLabel}
-                    {t.kind === 'transfer' && (
+                    {t.kind === 'transfer' && t.splitRole !== 'inflow' && t.splitRole !== 'outflow' && (
                       <span className="chip" style={{ marginLeft: 6, fontSize: 10 }}>
                         ↔ 이체
                       </span>
                     )}
+                    {t.splitBillId && t.splitRole && (
+                      <span className="chip status-done" style={{ marginLeft: 6, fontSize: 10 }}>
+                        {t.splitRole === 'inflow' ? '↩ 정산 입금' : '↪ 정산 출금'}
+                      </span>
+                    )}
+                    {(() => {
+                      const linked = splitBills.find((b) => b.txId === t.id);
+                      if (!linked) return null;
+                      const meta = splitBillStatusMeta(linked.status);
+                      return (
+                        <span
+                          className={`chip ${meta.className}`}
+                          style={{ marginLeft: 6, fontSize: 10 }}
+                        >
+                          {meta.emoji} {meta.label}
+                        </span>
+                      );
+                    })()}
                   </div>
                   <div className="tx-search-row-sub">
                     {t.date} · {acc?.name ?? '—'}

@@ -1161,6 +1161,367 @@ hr {
   color: var(--text);
 }
 
+/* ─── 선결재 (분할 정산) ─── */
+
+/* 거래 폼에서 모달을 열어주는 트리거 버튼 */
+.split-trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  box-shadow: none;
+  position: relative;
+}
+.split-trigger:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+.split-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.split-trigger-main {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+.split-trigger-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.split-trigger-placeholder {
+  font-size: 14px;
+  color: var(--text-faint);
+}
+.split-trigger-chevron {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  font-size: 18px;
+}
+
+/* 모달 내부 — bottom sheet 스타일 */
+.modal-backdrop.sheet .modal.split-bill-modal {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  border-radius: 20px 20px 0 0;
+  padding: 0;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+.split-bill-body {
+  padding: 14px 16px 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+.split-debtor-tabs {
+  display: flex;
+  gap: 6px;
+}
+.split-debtor-tab {
+  flex: 1;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: none;
+}
+.split-debtor-tab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.split-debtor-tab.on {
+  background: var(--accent-weak);
+  border-color: var(--accent);
+  color: var(--accent-dark);
+  font-weight: 600;
+}
+.split-member-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.split-member-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: none;
+}
+.split-member-chip.on {
+  background: var(--accent-weak);
+  border-color: var(--accent);
+  color: var(--accent-dark);
+  font-weight: 600;
+}
+
+/* 사용자별 금액 행 */
+.split-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.split-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-sm);
+}
+.split-row-me {
+  background: var(--bg-card);
+  border: 1px dashed var(--border);
+}
+.split-row-name {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.split-row-amt {
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+.split-row-amt.invalid {
+  color: var(--danger);
+}
+.split-row-input {
+  flex: 0 0 140px;
+}
+.split-row-input input {
+  text-align: right;
+}
+
+.split-totals {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--success-weak);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: #00875a;
+}
+.split-totals.invalid {
+  background: var(--danger-weak);
+  color: var(--danger);
+}
+
+.split-settle-box {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+/* ─── 정산 통합 뷰 (/settle) ─── */
+.settle-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.settle-tab {
+  flex: 1;
+  padding: 10px 8px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.settle-tab.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+.settle-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--bg-alt);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.settle-tab.active .settle-tab-count {
+  background: var(--accent-weak);
+  color: var(--accent-dark);
+}
+.settle-summary {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.settle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.settle-row:last-child {
+  border-bottom: none;
+}
+.settle-row:hover {
+  background: var(--bg-hover);
+}
+.settle-row-icon {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+.settle-row-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.settle-row-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.settle-row-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.settle-row-amt {
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 700;
+}
+.settle-row-amt.pos {
+  color: var(--accent);
+}
+.settle-row-amt.neg {
+  color: var(--danger);
+}
+
+/* 정산서 상세 */
+.settle-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+}
+.settle-detail-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.settle-detail-emoji {
+  font-size: 28px;
+}
+.settle-tx-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.settle-tx-row:last-child {
+  border-bottom: none;
+}
+.settle-tx-row:hover {
+  background: var(--bg-hover);
+}
+.settle-tx-row-icon {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.settle-tx-row-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.settle-tx-row-amt {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 700;
+}
+.settle-tx-row-amt.pos {
+  color: var(--accent);
+}
+.settle-tx-row-amt.neg {
+  color: var(--text);
+}
+.settle-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  align-items: center;
+}
+.settle-process-card {
+  border: 1px dashed var(--accent);
+}
+
+/* status chip 색 — types.ts 의 splitBillStatusMeta 와 매핑 */
+.chip.status-draft {
+  background: var(--bg-alt);
+  color: var(--text-muted);
+}
+.chip.status-cancelled {
+  background: var(--bg-alt);
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+.chip.status-rejected {
+  background: var(--danger-weak);
+  color: var(--danger);
+}
+
 /* ─── 거래 추가/수정 페이지 (/tx/new, /tx/:id) ─── */
 .tx-page {
   display: flex;

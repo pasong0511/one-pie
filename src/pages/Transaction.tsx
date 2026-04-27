@@ -14,7 +14,13 @@ import { usePageRuntime } from '../stores/runtime';
 import CategoryPickerModal from '../components/CategoryPickerModal';
 import CalculatorModal from '../components/CalculatorModal';
 import NumericInput from '../components/NumericInput';
-import { resolveTxKind, TxKind } from '../types';
+import SplitBillModal, { SplitBillDraft } from '../components/SplitBillModal';
+import {
+  describeDebtor,
+  resolveTxKind,
+  splitBillStatusMeta,
+  TxKind,
+} from '../types';
 
 // 거래 추가/수정 페이지.
 // 라우트: /tx/new (?accountId=…), /tx/:id
@@ -34,6 +40,10 @@ export default function Transaction() {
   const addTransaction = useStore((s) => s.addTransaction);
   const updateTransaction = useStore((s) => s.updateTransaction);
   const deleteTransaction = useStore((s) => s.deleteTransaction);
+  const splitBills = useStore((s) => s.splitBills);
+  const addSplitBill = useStore((s) => s.addSplitBill);
+  const updateSplitBill = useStore((s) => s.updateSplitBill);
+  const deleteSplitBill = useStore((s) => s.deleteSplitBill);
 
   const editingTx = transactionId
     ? transactions.find((t) => t.id === transactionId)
@@ -72,8 +82,26 @@ export default function Transaction() {
   const [memo, setMemo] = useState<string>(editingTx?.memo ?? '');
   const [source, setSource] = useState<string>(editingTx?.source ?? '');
   const [isSupplement, setIsSupplement] = useState<boolean>(editingTx?.isSupplement ?? false);
+  // 신규 거래 작성 시: 모달에서 받은 draft 를 보관, 저장 시 SplitBill 생성.
+  // 편집 모드: store 의 SplitBill 을 직접 갱신하므로 draft 는 안 쓰고 lookup 만.
+  const [pendingSplitDraft, setPendingSplitDraft] = useState<SplitBillDraft | null>(null);
+  const [splitOpen, setSplitOpen] = useState(false);
   const [catPickerOpen, setCatPickerOpen] = useState(false);
   const [calcOpen, setCalcOpen] = useState(false);
+
+  // 편집 모드: 현재 tx 와 묶인 정산서 (1:1 모델 — 거래당 정산서 최대 1개).
+  const linkedBill = useMemo(
+    () => (editingTx ? splitBills.find((b) => b.txId === editingTx.id) : undefined),
+    [editingTx, splitBills],
+  );
+
+  // 가족 멤버 — 본인 제외, 가족 그룹에 속한 사용자만 분할 대상으로
+  const users = useStore((s) => s.users);
+  const me = users.find((u) => u.id === currentUserId);
+  const familyMembers = users.filter(
+    (u) => u.id !== currentUserId && u.familyGroupId === me?.familyGroupId,
+  );
+  const hasFamily = familyMembers.length > 0;
 
   // 잘못된 :id 진입(존재하지 않는 거래) — 안전하게 새로 추가 모드로 떨어지지 않고 안내.
   if (transactionId && !editingTx) {
@@ -155,8 +183,6 @@ export default function Transaction() {
     const signed = kind === 'deposit' ? Math.abs(amount) : -Math.abs(amount);
     const supplementFlag =
       kind === 'deposit' && acc.mode === '차감형' && isSupplement ? true : undefined;
-    // kind 는 명시 저장 — transfer 만 amount 부호로 추론 불가하므로 필수,
-    // expense/deposit 는 호환성을 위해 생략 가능하지만 일관성 위해 함께 저장.
     if (isEdit && editingTx) {
       updateTransaction(editingTx.id, {
         date,
@@ -168,7 +194,7 @@ export default function Transaction() {
         isSupplement: supplementFlag,
       });
     } else {
-      addTransaction({
+      const newTx = addTransaction({
         accountId,
         authorId: currentUserId,
         date,
@@ -179,6 +205,18 @@ export default function Transaction() {
         memo: memo || undefined,
         isSupplement: supplementFlag,
       });
+      // 신규 거래에 정산서 draft 가 붙어있으면 같이 생성.
+      if (pendingSplitDraft) {
+        addSplitBill({
+          authorId: currentUserId,
+          debtor: pendingSplitDraft.debtor,
+          txId: newTx.id,
+          amount: pendingSplitDraft.amount,
+          status: 'requested',
+          memo: pendingSplitDraft.memo,
+          autoCreateInflowTx: pendingSplitDraft.autoCreateInflowTx,
+        });
+      }
     }
     navigate(-1);
   };
@@ -353,6 +391,69 @@ export default function Transaction() {
           <input value={memo} onChange={(e) => setMemo(e.target.value)} />
         </label>
 
+        {/* 정산하기 — 모달 트리거. 가족/외부/미분류 모두 지원. */}
+        <div className="field">
+          <span className="label-text">정산하기</span>
+          {linkedBill ? (
+            (() => {
+              const meta = splitBillStatusMeta(linkedBill.status);
+              const debtorLabel = describeDebtor(linkedBill.debtor, users);
+              return (
+                <button
+                  type="button"
+                  className="split-trigger"
+                  onClick={() => navigate(`/settle/${linkedBill.id}`)}
+                >
+                  <span className="split-trigger-main">
+                    {meta.emoji} {debtorLabel} → {formatKRW(linkedBill.amount)}
+                  </span>
+                  <span className="split-trigger-sub">
+                    {meta.label} · 탭하여 정산서 열기
+                  </span>
+                  <span className="split-trigger-chevron">›</span>
+                </button>
+              );
+            })()
+          ) : pendingSplitDraft ? (
+            <button
+              type="button"
+              className="split-trigger"
+              onClick={() => setSplitOpen(true)}
+            >
+              <span className="split-trigger-main">
+                🤝{' '}
+                {pendingSplitDraft.debtor.kind === 'user'
+                  ? users.find((u) => u.id === (pendingSplitDraft.debtor as { userId: string }).userId)?.name ?? '가족'
+                  : pendingSplitDraft.debtor.kind === 'external'
+                    ? pendingSplitDraft.debtor.name
+                    : pendingSplitDraft.debtor.label || '미분류'}{' '}
+                → {formatKRW(pendingSplitDraft.amount)}
+              </span>
+              <span className="split-trigger-sub">
+                저장 시 청구서 생성 · 탭하여 편집
+              </span>
+              <span className="split-trigger-chevron">›</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="split-trigger"
+              onClick={() => setSplitOpen(true)}
+              disabled={amount <= 0}
+            >
+              <span className="split-trigger-placeholder">
+                + {amount > 0 ? '정산하기 (이 거래를 누군가에게 청구)' : '먼저 금액을 입력하세요'}
+              </span>
+              <span className="split-trigger-chevron">›</span>
+            </button>
+          )}
+          {!hasFamily && !linkedBill && !pendingSplitDraft && (
+            <div className="hint" style={{ marginTop: 4 }}>
+              가족 미연결 상태입니다. 외부인 / 미분류로도 청구할 수 있어요.
+            </div>
+          )}
+        </div>
+
         {warnMsg && (
           <div className="warn-box">
             ⚠ {warnMsg}
@@ -404,6 +505,54 @@ export default function Transaction() {
           initialValue={amount}
           onApply={setAmount}
           onClose={() => setCalcOpen(false)}
+        />
+      )}
+      {splitOpen && (
+        <SplitBillModal
+          totalAmount={amount}
+          familyMembers={familyMembers}
+          initial={
+            linkedBill
+              ? {
+                  debtor: linkedBill.debtor,
+                  amount: linkedBill.amount,
+                  memo: linkedBill.memo,
+                  autoCreateInflowTx: linkedBill.autoCreateInflowTx,
+                }
+              : pendingSplitDraft ?? undefined
+          }
+          canRemove={!!linkedBill || !!pendingSplitDraft}
+          onApply={(draft) => {
+            if (linkedBill) {
+              // 편집 모드 + 기존 정산서 → 즉시 store 갱신
+              updateSplitBill(linkedBill.id, {
+                debtor: draft.debtor,
+                amount: draft.amount,
+                memo: draft.memo,
+                autoCreateInflowTx: draft.autoCreateInflowTx,
+              });
+            } else {
+              // 신규 거래 또는 편집 모드 + 정산서 신규 → draft 보관 또는 즉시 생성
+              if (isEdit && editingTx) {
+                addSplitBill({
+                  authorId: currentUserId,
+                  debtor: draft.debtor,
+                  txId: editingTx.id,
+                  amount: draft.amount,
+                  status: 'requested',
+                  memo: draft.memo,
+                  autoCreateInflowTx: draft.autoCreateInflowTx,
+                });
+              } else {
+                setPendingSplitDraft(draft);
+              }
+            }
+          }}
+          onRemove={() => {
+            if (linkedBill) deleteSplitBill(linkedBill.id);
+            else setPendingSplitDraft(null);
+          }}
+          onClose={() => setSplitOpen(false)}
         />
       )}
     </div>

@@ -60,7 +60,8 @@ export function sumSpentInMonth(
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 }
 
-// 수입 합계 — 마찬가지로 이체 제외.
+// 수입 합계 — 이체 + 정산 입금(자동 생성) 제외.
+// 정산 입금은 본인이 선결재한 돈을 돌려받는 것이므로 수입 통계에 잡으면 부풀려짐.
 export function sumInflowInMonth(
   accountId: string,
   month: string,
@@ -70,7 +71,7 @@ export function sumInflowInMonth(
   return transactions
     .filter((t) => t.accountId === accountId && monthOf(t.date) === month)
     .filter((t) => (category ? t.category === category : true))
-    .filter((t) => t.amount > 0 && t.kind !== 'transfer')
+    .filter((t) => t.amount > 0 && t.kind !== 'transfer' && !t.splitBillId)
     .reduce((sum, t) => sum + t.amount, 0);
 }
 

@@ -1,9 +1,17 @@
-import { useMemo, useState } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import { canEditTransaction, visibleAccounts } from '../utils/selectors';
 import { currentMonth, formatCompact, formatKRW, todayISO } from '../utils/format';
-import { Account, ACCOUNT_TYPE_META, MainCategory, Transaction, User } from '../types';
+import {
+  Account,
+  ACCOUNT_TYPE_META,
+  MainCategory,
+  splitBillStatusMeta,
+  SplitBill,
+  Transaction,
+  User,
+} from '../types';
 import { formatCategoryPath } from '../utils/category';
 import MonthNavigator from '../components/MonthNavigator';
 import TransactionSearchModal from '../components/TransactionSearchModal';
@@ -19,6 +27,7 @@ export default function Calendar() {
   const transactions = useStore((s) => s.transactions);
   const users = useStore((s) => s.users);
   const taxonomy = useStore((s) => s.categoryTaxonomy);
+  const splitBills = useStore((s) => s.splitBills);
   const filterAccountIds = usePageRuntime((s) => s.txFilterAccountIds);
   const calendarSections = useStore((s) => s.preferences.calendarSections);
   const navigate = useNavigate();
@@ -173,6 +182,7 @@ export default function Calendar() {
             taxonomy={taxonomy}
             accounts={accounts}
             users={users}
+            splitBills={splitBills}
             currentUserId={currentUserId}
             today={today}
             onEdit={goEdit}
@@ -192,6 +202,7 @@ export default function Calendar() {
             selectedExpense={selectedExpense}
             accounts={accounts}
             users={users}
+            splitBills={splitBills}
             currentUserId={currentUserId}
             onEdit={goEdit}
           />
@@ -220,11 +231,12 @@ function ListView(props: {
   taxonomy: MainCategory[];
   accounts: Account[];
   users: User[];
+  splitBills: SplitBill[];
   currentUserId: string;
   today: string;
   onEdit: (id: string) => void;
 }) {
-  const { groups, taxonomy, accounts, users, currentUserId, today, onEdit } = props;
+  const { groups, taxonomy, accounts, users, splitBills, currentUserId, today, onEdit } = props;
 
   if (groups.length === 0) {
     return <div className="empty" style={{ padding: 32 }}>이번 달 거래가 없어요.</div>;
@@ -273,7 +285,8 @@ function ListView(props: {
                       {t.memo ? ` · ${t.memo}` : ''}
                       {authorName ? ` · ${authorName}` : ''}
                       {t.isSupplement && ' · 💰 추경'}
-                      {t.kind === 'transfer' && ' · ↔ 이체'}
+                      {t.kind === 'transfer' && t.splitRole !== 'inflow' && t.splitRole !== 'outflow' && ' · ↔ 이체'}
+                      {renderSplitChips(t, splitBills)}
                     </div>
                   </div>
                   <div className={`cal-list-row-amt ${t.amount >= 0 ? 'pos' : 'neg'}`}>
@@ -305,6 +318,7 @@ function CalendarView(props: {
   selectedExpense: number;
   accounts: Account[];
   users: User[];
+  splitBills: SplitBill[];
   currentUserId: string;
   onEdit: (id: string) => void;
 }) {
@@ -319,6 +333,7 @@ function CalendarView(props: {
     selectedExpense,
     accounts,
     users,
+    splitBills,
     currentUserId,
     onEdit,
   } = props;
@@ -435,11 +450,12 @@ function CalendarView(props: {
                       💰 추경
                     </span>
                   )}
-                  {t.kind === 'transfer' && (
+                  {t.kind === 'transfer' && t.splitRole !== 'inflow' && t.splitRole !== 'outflow' && (
                     <span className="chip" style={{ marginLeft: 6, fontSize: 10 }}>
                       ↔ 이체
                     </span>
                   )}
+                  {renderSplitChips(t, splitBills)}
                 </div>
               </div>
               <div className={`cal-tx-amt ${t.amount >= 0 ? 'pos' : 'neg'}`}>
@@ -482,4 +498,28 @@ function formatDayHeader(iso: string, today: string): string {
   const d = new Date(iso);
   const dow = WEEKDAY_LABELS[d.getDay()];
   return `${dd}일 ${dow}요일`;
+}
+
+// 정산 관련 칩 렌더 — 원본 거래(여러 bill 가능) / 자동 생성된 정산 입출금 거래.
+function renderSplitChips(t: Transaction, splitBills: SplitBill[]): ReactNode {
+  // 자동 생성된 거래
+  if (t.splitBillId && t.splitRole) {
+    return (
+      <span
+        className="chip status-done"
+        style={{ marginLeft: 6, fontSize: 10 }}
+      >
+        {t.splitRole === 'inflow' ? '↩ 정산 입금' : '↪ 정산 출금'}
+      </span>
+    );
+  }
+  // 원본 거래 — 거래당 정산서 1개 (1:1)
+  const linked = splitBills.find((b) => b.txId === t.id);
+  if (!linked) return null;
+  const meta = splitBillStatusMeta(linked.status);
+  return (
+    <span className={`chip ${meta.className}`} style={{ marginLeft: 6, fontSize: 10 }}>
+      {meta.emoji} {meta.label}
+    </span>
+  );
 }

@@ -11,6 +11,12 @@ type Row = {
 
 const ROWS: Row[] = [
   {
+    key: 'settle',
+    icon: '🤝',
+    label: '정산',
+    sublabel: '받을/보낼 정산 요약 (미완료 건 있을 때만 노출)',
+  },
+  {
     key: 'goals',
     icon: '🎯',
     label: '목표',

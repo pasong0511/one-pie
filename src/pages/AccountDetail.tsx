@@ -14,7 +14,7 @@ import { formatKRW, currentMonth } from '../utils/format';
 import PropertyPanel from '../components/PropertyPanel';
 import SettlementModal from '../components/SettlementModal';
 import MonthNavigator from '../components/MonthNavigator';
-import { ACCOUNT_TYPE_META } from '../types';
+import { ACCOUNT_TYPE_META, splitBillStatusMeta } from '../types';
 
 export default function AccountDetail() {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +27,7 @@ export default function AccountDetail() {
   const transactions = useStore((s) => s.transactions);
   const users = useStore((s) => s.users);
   const goals = useStore((s) => s.goals);
+  const splitBills = useStore((s) => s.splitBills);
   const [propOpen, setPropOpen] = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
   const [month, setMonth] = useState<string>(navState?.month ?? currentMonth());
@@ -196,11 +197,29 @@ export default function AccountDetail() {
                     💰 추경
                   </span>
                 )}
-                {t.kind === 'transfer' && (
+                {t.kind === 'transfer' && t.splitRole !== 'inflow' && t.splitRole !== 'outflow' && (
                   <span className="chip" style={{ marginLeft: 6, fontSize: 10 }}>
                     ↔ 이체
                   </span>
                 )}
+                {t.splitBillId && t.splitRole && (
+                  <span className="chip status-done" style={{ marginLeft: 6, fontSize: 10 }}>
+                    {t.splitRole === 'inflow' ? '↩ 정산 입금' : '↪ 정산 출금'}
+                  </span>
+                )}
+                {(() => {
+                  const linked = splitBills.find((b) => b.txId === t.id);
+                  if (!linked) return null;
+                  const meta = splitBillStatusMeta(linked.status);
+                  return (
+                    <span
+                      className={`chip ${meta.className}`}
+                      style={{ marginLeft: 6, fontSize: 10 }}
+                    >
+                      {meta.emoji} {meta.label}
+                    </span>
+                  );
+                })()}
                 <span className="author" style={{ marginLeft: 8 }}>· {authorName}</span>
               </div>
               <div className={`amount ${t.amount >= 0 ? 'positive' : 'negative'}`}>

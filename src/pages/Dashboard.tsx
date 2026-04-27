@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore, remainingBudget, cumulativeBalance } from '../store';
 import { visibleAccounts, visibleGoals, goalProgress } from '../utils/selectors';
@@ -23,14 +23,88 @@ export default function Dashboard() {
   // 미설정/true 모두 표시, false 만 숨김.
   const showGoals = homeSections.goals !== false;
   const showAccounts = homeSections.accounts !== false;
+  const showSettle = homeSections.settle !== false;
 
   return (
     <div className="dashboard">
+      {showSettle && <SettleSection />}
       {showGoals && <GoalsSection />}
       {showAccounts && <AccountsSection />}
-      {!showGoals && !showAccounts && <EmptySection />}
+      {!showGoals && !showAccounts && !showSettle && <EmptySection />}
       <WhatIfSection />
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 정산 섹션 — 받을/보낼 정산 요약 카드. 둘 다 0건이면 섹션 통째로 숨김.
+// ──────────────────────────────────────────────────────────────────────────
+function SettleSection() {
+  const navigate = useNavigate();
+  const currentUserId = useStore((s) => s.currentUserId)!;
+  const splitBills = useStore((s) => s.splitBills);
+
+  const { receiveCount, receiveTotal, payCount, payTotal } = useMemo(() => {
+    let rc = 0;
+    let rt = 0;
+    let pc = 0;
+    let pt = 0;
+    for (const b of splitBills) {
+      if (b.status === 'settled' || b.status === 'cancelled' || b.status === 'rejected') continue;
+      if (b.authorId === currentUserId) {
+        rc++;
+        rt += b.amount;
+      } else if (b.debtor.kind === 'user' && b.debtor.userId === currentUserId) {
+        pc++;
+        pt += b.amount;
+      }
+    }
+    return { receiveCount: rc, receiveTotal: rt, payCount: pc, payTotal: pt };
+  }, [splitBills, currentUserId]);
+
+  if (receiveCount === 0 && payCount === 0) return null;
+
+  return (
+    <section className="page-section page-section-settle">
+      <div className="section-title">정산</div>
+      {receiveCount > 0 && (
+        <div
+          className="card hover settle-summary-card"
+          onClick={() => navigate('/settle')}
+          style={{ marginBottom: 8 }}
+        >
+          <div className="row between">
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                🤝 받을 정산
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, marginTop: 2 }}>
+                {receiveCount}건 · +{formatKRW(receiveTotal)}
+              </div>
+            </div>
+            <span style={{ color: 'var(--text-faint)', fontSize: 18 }}>›</span>
+          </div>
+        </div>
+      )}
+      {payCount > 0 && (
+        <div
+          className="card hover settle-summary-card"
+          onClick={() => navigate('/settle')}
+        >
+          <div className="row between">
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                📤 보낼 정산
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, marginTop: 2, color: 'var(--danger)' }}>
+                {payCount}건 · -{formatKRW(payTotal)}
+              </div>
+            </div>
+            <span style={{ color: 'var(--text-faint)', fontSize: 18 }}>›</span>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

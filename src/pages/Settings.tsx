@@ -50,8 +50,8 @@ export default function Settings() {
           label: '홈 화면',
           sublabel: hiddenSummary<HomeSection>(
             preferences.homeSections,
-            ['goals', 'accounts'],
-            { goals: '목표', accounts: '계좌' },
+            ['settle', 'goals', 'accounts'],
+            { settle: '정산', goals: '목표', accounts: '계좌' },
           ),
         },
         {

@@ -84,6 +84,12 @@ function computeRouteMeta(pathname: string): RouteMeta {
   if (pathname.startsWith('/tx/')) {
     return { title: '거래 수정', showSwitcher: false, showBack: true, hideChrome: true };
   }
+  if (pathname === '/settle') {
+    return { title: '정산', showSwitcher: false, showBack: true, hideChrome: false };
+  }
+  if (pathname.startsWith('/settle/')) {
+    return { title: '정산서', showSwitcher: false, showBack: true, hideChrome: false };
+  }
 
   const showSwitcher =
     pathname === '/accounts' || pathname.startsWith('/account/');

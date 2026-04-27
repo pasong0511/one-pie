@@ -10,6 +10,8 @@ import {
   Preferences,
   RecurringRule,
   SettlementDecision,
+  SplitBill,
+  SplitDebtor,
   Transaction,
   User,
 } from './types';
@@ -29,6 +31,7 @@ type State = {
   goals: Goal[];
   transactions: Transaction[];
   recurringRules: RecurringRule[];
+  splitBills: SplitBill[];
   categoryTaxonomy: MainCategory[];
   preferences: Preferences;
   initialized: boolean;
@@ -75,6 +78,25 @@ type Actions = {
   updateRecurringRule: (id: string, patch: Partial<RecurringRule>) => void;
   deleteRecurringRule: (id: string, removeGenerated: boolean) => void;
   materializeRecurringRules: () => number;
+  // 정산 (SplitBill)
+  addSplitBill: (
+    input: Omit<SplitBill, 'id' | 'inflowTxId' | 'outflowTxId'>,
+  ) => SplitBill;
+  updateSplitBill: (id: string, patch: Partial<Omit<SplitBill, 'id'>>) => void;
+  deleteSplitBill: (id: string) => void;
+  // 상태 전이 — settled 외 (draft/requested/seen/cancelled/rejected).
+  setSplitBillStatus: (
+    id: string,
+    status: 'draft' | 'requested' | 'seen' | 'cancelled' | 'rejected',
+    options?: { reason?: string },
+  ) => void;
+  // settled 처리 — 자동 거래 생성 포함.
+  // 가족: outflowAccountId 필수, inflowAccountId 자동(원본 거래 계좌)
+  // 외부/미분류: inflowAccountId 필수 (autoCreateInflowTx=true 일 때만 자동 거래 생성)
+  settleSplitBill: (
+    id: string,
+    params: { outflowAccountId?: string; inflowAccountId?: string; date?: string },
+  ) => void;
   resetAll: () => void;
   loadSeed: () => void;
 };
@@ -89,6 +111,7 @@ const emptyState: State = {
   goals: [],
   transactions: [],
   recurringRules: [],
+  splitBills: [],
   categoryTaxonomy: DEFAULT_CATEGORY_TAXONOMY,
   preferences: DEFAULT_PREFERENCES,
   initialized: false,
@@ -400,7 +423,43 @@ export const useStore = create<Store>()(
         })),
 
       deleteTransaction: (id) =>
-        set((s) => ({ transactions: s.transactions.filter((t) => t.id !== id) })),
+        set((s) => {
+          const target = s.transactions.find((t) => t.id === id);
+          // 1) 단순 삭제
+          let nextTxs = s.transactions.filter((t) => t.id !== id);
+          let nextBills = s.splitBills;
+
+          if (target) {
+            // 2-A) 자동 생성된 정산 거래(inflow/outflow) 삭제 → bill 을 seen 으로 되돌리고 링크 해제
+            if (target.splitBillId && target.splitRole) {
+              const billId = target.splitBillId;
+              nextBills = nextBills.map((b) => {
+                if (b.id !== billId) return b;
+                // 짝 거래도 함께 삭제 (가족 케이스의 transfer 쌍)
+                const pairIds = [b.inflowTxId, b.outflowTxId].filter(
+                  (x): x is string => !!x && x !== id,
+                );
+                if (pairIds.length > 0) {
+                  nextTxs = nextTxs.filter((t) => !pairIds.includes(t.id));
+                }
+                return {
+                  ...b,
+                  status: 'seen',
+                  inflowTxId: undefined,
+                  outflowTxId: undefined,
+                  outflowAccountId: undefined,
+                  // 외부 케이스의 inflowAccountId 는 사용자가 고른 값이라 유지.
+                  // 가족 케이스는 자동 결정이므로 유지해도 무해.
+                };
+              });
+            } else {
+              // 2-B) 원본 거래 삭제 → 그 거래에 묶인 정산서 함께 삭제 (1:1).
+              nextBills = nextBills.filter((b) => b.txId !== id);
+            }
+          }
+
+          return { transactions: nextTxs, splitBills: nextBills };
+        }),
 
       addGoal: (input) => {
         const goal: Goal = { ...input, id: uid('goal') };
@@ -549,6 +608,157 @@ export const useStore = create<Store>()(
         return newTxs.length;
       },
 
+      addSplitBill: (input) => {
+        const bill: SplitBill = { ...input, id: uid('sb') };
+        set((s) => ({ splitBills: [...s.splitBills, bill] }));
+        return bill;
+      },
+
+      updateSplitBill: (id, patch) =>
+        set((s) => ({
+          splitBills: s.splitBills.map((b) => (b.id === id ? { ...b, ...patch } : b)),
+        })),
+
+      deleteSplitBill: (id) =>
+        set((s) => {
+          const bill = s.splitBills.find((b) => b.id === id);
+          if (!bill) return s;
+          // settled 상태면 자동 생성된 거래도 함께 삭제 (사용자가 명시적으로 정산서 자체를 폐기하는 경우)
+          const removeIds = new Set(
+            [bill.inflowTxId, bill.outflowTxId].filter((x): x is string => !!x),
+          );
+          return {
+            splitBills: s.splitBills.filter((b) => b.id !== id),
+            transactions:
+              removeIds.size > 0
+                ? s.transactions.filter((t) => !removeIds.has(t.id))
+                : s.transactions,
+          };
+        }),
+
+      setSplitBillStatus: (id, status, options) =>
+        set((s) => ({
+          splitBills: s.splitBills.map((b) =>
+            b.id === id
+              ? {
+                  ...b,
+                  status,
+                  cancelledReason:
+                    status === 'cancelled' ? options?.reason ?? b.cancelledReason : undefined,
+                  rejectedReason:
+                    status === 'rejected' ? options?.reason ?? b.rejectedReason : undefined,
+                }
+              : b,
+          ),
+        })),
+
+      settleSplitBill: (id, params) => {
+        const state = get();
+        const bill = state.splitBills.find((b) => b.id === id);
+        if (!bill) return;
+        if (bill.status === 'settled') return;
+
+        const date = params.date ?? todayISO();
+        const amount = Math.abs(bill.amount);
+        const author = state.users.find((u) => u.id === bill.authorId);
+        const debtorLabel = describeDebtorLocal(bill.debtor, state.users);
+        const memo = bill.memo
+          ? `정산: ${bill.memo}`
+          : `정산: ${debtorLabel} → ${author?.name ?? ''}`.trim();
+
+        const newTxs: Transaction[] = [];
+        let inflowTxId: string | undefined;
+        let outflowTxId: string | undefined;
+        let inflowAccountId = params.inflowAccountId;
+        let outflowAccountId = params.outflowAccountId;
+
+        if (bill.debtor.kind === 'user') {
+          // 가족 케이스 — transfer 쌍 자동 생성
+          if (!outflowAccountId) {
+            console.warn('settleSplitBill (user): outflowAccountId required');
+            return;
+          }
+          // 받는 쪽 계좌: 원본 거래의 계좌
+          if (!inflowAccountId) {
+            const originTx = state.transactions.find((t) => t.id === bill.txId);
+            inflowAccountId = originTx?.accountId;
+          }
+          if (!inflowAccountId) {
+            console.warn('settleSplitBill (user): inflowAccountId could not be resolved');
+            return;
+          }
+
+          const outId = uid('t');
+          const inId = uid('t');
+          outflowTxId = outId;
+          inflowTxId = inId;
+
+          newTxs.push({
+            id: outId,
+            accountId: outflowAccountId,
+            authorId: bill.debtor.userId,
+            date,
+            amount: -amount,
+            kind: 'transfer',
+            memo,
+            splitBillId: bill.id,
+            splitRole: 'outflow',
+          });
+          newTxs.push({
+            id: inId,
+            accountId: inflowAccountId,
+            authorId: bill.authorId,
+            date,
+            amount: amount,
+            kind: 'transfer',
+            memo,
+            splitBillId: bill.id,
+            splitRole: 'inflow',
+          });
+        } else {
+          // 외부 / 미분류 — autoCreateInflowTx=true 일 때만 본인 계좌에 deposit 생성
+          if (bill.autoCreateInflowTx) {
+            if (!inflowAccountId) {
+              const originTx = state.transactions.find((t) => t.id === bill.txId);
+              inflowAccountId = originTx?.accountId;
+            }
+            if (!inflowAccountId) {
+              console.warn('settleSplitBill (external): inflowAccountId required');
+              return;
+            }
+            const inId = uid('t');
+            inflowTxId = inId;
+            newTxs.push({
+              id: inId,
+              accountId: inflowAccountId,
+              authorId: bill.authorId,
+              date,
+              amount: amount,
+              kind: 'deposit',
+              memo,
+              splitBillId: bill.id,
+              splitRole: 'inflow',
+            });
+          }
+        }
+
+        set((s) => ({
+          transactions: [...s.transactions, ...newTxs],
+          splitBills: s.splitBills.map((b) =>
+            b.id === id
+              ? {
+                  ...b,
+                  status: 'settled',
+                  outflowAccountId,
+                  inflowAccountId,
+                  inflowTxId,
+                  outflowTxId,
+                }
+              : b,
+          ),
+        }));
+      },
+
       resetAll: () => set({ ...emptyState, initialized: true }),
 
       loadSeed: () => {
@@ -590,6 +800,53 @@ export const useStore = create<Store>()(
             ...DEFAULT_PREFERENCES,
             ...merged.preferences,
           };
+        }
+        // 옛 splitShares / splitSettled / splitWith → SplitBill[] 마이그레이션.
+        // - 1 tx 의 N명 share → N개의 SplitBill (각 1명 debtor, status=requested 또는 settled)
+        // - 옛 splitWith(균등) 도 같은 방식으로 흡수
+        // - persist 데이터에 splitBills 가 없으면 빈 배열로 보장.
+        if (!Array.isArray(merged.splitBills)) merged.splitBills = [];
+        if (Array.isArray(merged.transactions)) {
+          type LegacyTx = Transaction & {
+            splitShares?: { userId: string; amount: number }[];
+            splitSettled?: boolean;
+            splitWith?: string[];
+          };
+          const newBills: SplitBill[] = [];
+          merged.transactions = merged.transactions.map((tRaw) => {
+            const t = tRaw as LegacyTx;
+            const legacyWith = t.splitWith;
+            const legacyShares =
+              t.splitShares ??
+              (legacyWith && legacyWith.length > 0
+                ? legacyWith.map((uid2) => ({
+                    userId: uid2,
+                    amount: Math.round(Math.abs(t.amount) / (legacyWith.length + 1)),
+                  }))
+                : undefined);
+            if (legacyShares && legacyShares.length > 0) {
+              const status: SplitBill['status'] = t.splitSettled ? 'settled' : 'requested';
+              for (const sh of legacyShares) {
+                newBills.push({
+                  id: uid('sb'),
+                  authorId: t.authorId,
+                  debtor: { kind: 'user', userId: sh.userId },
+                  txId: t.id,
+                  amount: sh.amount,
+                  status,
+                });
+              }
+              const cleaned = { ...t };
+              delete cleaned.splitShares;
+              delete cleaned.splitSettled;
+              delete cleaned.splitWith;
+              return cleaned as Transaction;
+            }
+            return tRaw as Transaction;
+          });
+          if (newBills.length > 0) {
+            merged.splitBills = [...merged.splitBills, ...newBills];
+          }
         }
         return merged;
       },
@@ -642,8 +899,13 @@ export function remainingBudget(
   const initialAllocated =
     monthlyTotal !== undefined ? Math.max(monthlyTotal, categorySum) : categorySum;
   const spent = sumSpentInMonth(accountId, month, undefined, transactions);
+  // 이 달 양수 거래 — 정산 자동 입금은 분리 (일반 입금/추경에 섞이면 안 됨)
   const monthTxs = transactions.filter(
-    (t) => t.accountId === accountId && t.date.startsWith(month) && t.amount > 0,
+    (t) =>
+      t.accountId === accountId &&
+      t.date.startsWith(month) &&
+      t.amount > 0 &&
+      !t.splitBillId,
   );
   const supplemented = monthTxs
     .filter((t) => t.isSupplement)
@@ -651,14 +913,30 @@ export function remainingBudget(
   const regularInflow = monthTxs
     .filter((t) => !t.isSupplement)
     .reduce((s, t) => s + t.amount, 0);
+
+  // 정산 자동 거래는 잔액엔 반영해야 함 (실제 돈 이동) 하지만 통계엔 빠져야 함.
+  // sumSpentInMonth 가 transfer 를 제외하므로 spent 에 안 잡혀서 별도 보정.
+  const settlementTxs = transactions.filter(
+    (t) =>
+      t.accountId === accountId && t.date.startsWith(month) && t.splitBillId,
+  );
+  const settlementInflow = settlementTxs
+    .filter((t) => t.amount > 0)
+    .reduce((s, t) => s + t.amount, 0);
+  const settlementOutflow = settlementTxs
+    .filter((t) => t.amount < 0)
+    .reduce((s, t) => s + Math.abs(t.amount), 0);
+
   const allocated = initialAllocated + supplemented;
+  // 차감형 남음: (예산 - 사용) - 정산 출금 + 정산 입금 (예산 회복 효과)
+  const remaining = allocated - spent - settlementOutflow + settlementInflow;
   return {
     initialAllocated,
     supplemented,
     regularInflow,
     allocated,
     spent,
-    remaining: allocated - spent,
+    remaining,
   };
 }
 
@@ -694,3 +972,12 @@ export function accountBalance(
 }
 
 void monthOf;
+
+// describeDebtor 의 store 내부 사본 — 외부 import 순환 방지용.
+function describeDebtorLocal(debtor: SplitDebtor, users: User[]): string {
+  if (debtor.kind === 'user') {
+    return users.find((u) => u.id === debtor.userId)?.name ?? '가족 멤버';
+  }
+  if (debtor.kind === 'external') return debtor.name;
+  return debtor.label?.trim() || '미분류';
+}

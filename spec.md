@@ -457,6 +457,109 @@
 - 리스트 행에는 `↔ 이체` 칩으로 시각적 구분 (Calendar 목록/달력 모드, AccountDetail, 검색 결과 모두).
 - legacy 호환: `Transaction.kind` 누락 시 `resolveTxKind()` 가 amount 부호로 추론 (`amount >= 0 ? 'deposit' : 'expense'`).
 
+**정산 (SplitBill)**
+
+> 본인이 선결재한 거래를 **다른 사람에게 청구**하는 기능. 가족 멤버 외에 **외부인 / 미분류**도 지원. **1 거래 = 1 정산서** 1:1 모델 — 받는 사람(동건)이 거래 한 건씩 따로 처리하도록 의도적으로 묶음 청구는 빼둠.
+
+**도메인 모델**
+
+```ts
+type SplitBill = {
+  id: string;
+  authorId: string;             // 청구한 본인
+  debtor: SplitDebtor;          // 받을 대상 (가족 / 외부인 / 미분류)
+  txId: string;                 // 청구 대상 원본 거래 (1:1)
+  amount: number;               // 청구액 (보통 |원본 amount|, 일부만 청구 가능)
+  status: SplitBillStatus;      // draft / requested / seen / settled / cancelled
+  autoCreateInflowTx?: boolean; // 외부/미분류 settled 시 자동 입금 거래 생성?
+  outflowAccountId?: string;    // 가족만 — debtor 가 출금한 계좌
+  inflowAccountId?: string;     // 받는 쪽 계좌
+  inflowTxId?: string;
+  outflowTxId?: string;
+  memo?: string;
+  cancelledReason?: string;
+};
+
+type SplitDebtor =
+  | { kind: 'user'; userId: string }                              // 가족 구성원
+  | { kind: 'external'; name: string; contact?: string }          // 외부인 (이름만)
+  | { kind: 'memo'; label?: string };                             // 미분류 / 단순 기록용
+```
+
+- `Transaction` 에는 **자동 생성된 정산 거래만** 백링크 (`splitBillId`, `splitRole: 'inflow' | 'outflow'`). 원본 거래는 `splitBills` 에서 `txId` 로 역참조 — 거래당 정산서 최대 1개.
+- 청구 대상 union 으로 가족·외부·미분류 분기 처리. 가족(`user`) 만 lifecycle 의 `seen` 단계가 의미 있음.
+
+**Status lifecycle**
+
+```
+가족 (kind='user')
+  draft ──► requested ──► seen ──► settled
+              │   ↓         │   ↓
+              │ rejected    │ rejected   (debtor 가 반려)
+              └────────► cancelled       (author 가 철회)
+
+외부 / 미분류 (kind='external' | 'memo')
+  draft ──► requested ──► settled
+              │
+              └─► cancelled                (author 가 철회)
+```
+
+| status | 의미 | 누가 바꾸나 |
+|---|---|---|
+| `draft` | 작성 중 (UI 거의 안 씀, 신규는 곧바로 requested) | author |
+| `requested` | 청구 보냄 — 가족: 상대 미확인 / 외부: 받기 기다림 | 자동 |
+| `seen` | (가족만) 상대가 정산서 화면 진입 시 자동 set — "확인중" | 자동 (debtor 가 detail 페이지 mount 시 `useEffect`) |
+| `settled` | 정산 완료 — 자동 거래 생성 | 가족: debtor / 외부: author |
+| `cancelled` | author 가 청구 철회 (사유: `cancelledReason`) | author |
+| `rejected` | (가족만) debtor 가 청구 반려 (사유: `rejectedReason`) | debtor |
+
+**자동 거래 생성 규칙 (settled 시점)**
+
+| 케이스 | 생성되는 거래 | 비고 |
+|---|---|---|
+| 가족 (`user`) | `transfer` 쌍 — debtor 출금 계좌 `-amount`, author 받는 계좌 `+amount` | 항상. transfer 라 통계 자동 제외 |
+| 외부 (`external`) | author 받는 계좌에 `kind='deposit'` `+amount` 한 줄 | `autoCreateInflowTx=true` 일 때만 |
+| 미분류 (`memo`) | 동일 — `autoCreateInflowTx` 토글 따라 | 메모용은 토글 off |
+
+- 자동 생성된 거래는 `splitBillId` + `splitRole='inflow' | 'outflow'` 로 식별.
+- `splitBillId` 가 있는 deposit/transfer 는 `sumInflowInMonth` / `remainingBudget.regularInflow` 에서 **제외** — 청구 회수 입금이 수입/예산으로 부풀려지는 것 방지. 잔액(`cumulativeBalance`)에는 반영.
+
+**페이지 / UX**
+
+- `/settle` — 통합 뷰. **받을 정산** (본인이 청구) / **보낼 정산** (debtor.userId 가 본인) / **완료** 3개 탭.
+- `/settle/:id` — 정산서 상세. 묶인 거래 목록, 자동 생성된 정산 거래, 액션 영역 (보내기 / 정산 처리 / 취소 / 삭제 / 📤 메시지 공유).
+- 거래 입력 페이지 (`/tx/new`, `/tx/:id`):
+  - "정산하기" 트리거 버튼. 비어있으면 `+ 정산하기 (이 거래를 누군가에게 청구)`, 청구서 있으면 status 칩 + 정산서로 이동.
+  - 신규 거래: 모달에서 받은 draft 를 보관 → 거래 저장 시 같이 `addSplitBill`.
+  - 편집 거래: 모달 적용 즉시 `addSplitBill` 또는 `updateSplitBill`. 정산서 상세 편집은 `/settle/:id` 에서.
+- 모달 (`SplitBillModal`): debtor 종류 탭 (가족 / 외부 / 미분류) → 청구액 (거래 금액 이내) → 메모 → 외부/미분류일 때만 `autoCreateInflowTx` 토글.
+- 홈 대시보드 (`/`): "정산" 섹션 — 받을 정산 N건 / 보낼 정산 N건 요약 카드 (`HomeSection='settle'` 토글). 미완료 건이 0이면 섹션 통째로 숨김. 클릭 시 `/settle` 진입.
+
+**리스트 칩** (Calendar 목록·달력, AccountDetail, TransactionSearchModal)
+
+- 원본 거래 행: status 따라 `📝 작성중` / `🤝 요청중` / `👁 확인중` / `✅ 정산완료` / `✖ 취소됨` / `🚫 반려됨` (1:1 이라 칩 최대 1개)
+- 자동 생성된 행: `↩ 정산 입금` (inflow) / `↪ 정산 출금` (outflow). transfer 칩(`↔ 이체`)은 표시 안 함 — 정산 칩이 우선.
+
+**메시지 공유**
+
+- `Web Share API` (`navigator.share`) → 시스템 공유시트 → 모바일에선 카톡/문자 자동 노출. fallback: 클립보드 복사.
+- 메시지 형식: 청구한 사람 이름, 받을 분, 금액, 대상 거래 1건 (날짜·금액·계좌·카테고리·메모), 메모.
+
+**삭제·되돌리기**
+
+- 원본 거래 삭제 시: 그 거래에 묶인 정산서(`txId === id`)도 함께 삭제 (1:1).
+- 자동 생성된 정산 거래 삭제 시: 정산서 status 를 `seen` 으로 되돌리고 `inflowTxId`/`outflowTxId`/`outflowAccountId` 클리어. 짝(transfer 쌍)도 함께 삭제.
+- 정산서 자체 삭제 시: 자동 생성된 거래(들)도 함께 삭제.
+
+**마이그레이션** (store.ts persist merge 단계)
+
+- 옛 `Transaction.splitShares` (가족별 균등/개별 분할) → 각 share 마다 `SplitBill` 1개 생성 (`debtor.kind='user'`, status=`splitSettled ? 'settled' : 'requested'`).
+- 옛 `splitWith: string[]` (균등) → 같은 방식으로 흡수.
+- 1 거래에 N 명 share → N 개의 정산서가 생성됨 (각 1명 청구, 같은 `txId` 공유 — 1 거래에 여러 정산서가 붙어도 OK). 단 신규 작성 UI 는 거래당 1개만 만든다.
+- 변환 후 `splitShares`/`splitSettled`/`splitWith` 필드는 거래에서 제거.
+
+**v3 후보**: 카카오 SDK 직접 연동, 묶음 청구(여러 거래를 1 정산서로 — 받는 쪽 일괄 처리), `scheduled` 상태 (월말 일괄 처리 예약).
+
 ```
 ┌──────── 거래 기록 ────────────────[×]─┐
 │                                        │
