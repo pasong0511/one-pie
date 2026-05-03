@@ -52,6 +52,8 @@ export function decodeInvite(token: string): InvitePayload | null {
 export function buildInviteUrl(payload: InvitePayload): string {
   const token = encodeInvite(payload);
   const { origin, pathname } = window.location;
-  return `${origin}${pathname}?invite=${token}`;
+  // HashRouter 에선 query string 이 hash 안에 들어가야 useLocation().search 로 잡힘.
+  // 형식: https://host/path/#/?invite=...
+  return `${origin}${pathname}#/?invite=${token}`;
 }
 

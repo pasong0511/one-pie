@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import { decodeInvite } from '../utils/invite';
+import { pickBlob, pullState, pushState } from '../lib/cloudSync';
 
 const EMOJI_CHOICES = ['👤', '👨', '👩', '🧑', '🧔', '👧', '👦', '🐱', '🐶', '🦊', '🐻', '🌟'];
 
@@ -28,30 +29,66 @@ export default function Login() {
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('👤');
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const pick = (id: string) => {
     setCurrentUser(id);
     navigate('/', { replace: true });
   };
 
-  const submitSignUp = () => {
+  const submitSignUp = async () => {
+    if (busy) return;
     setError(null);
+    setBusy(true);
     try {
-      signUp(name, emoji);
+      const newUser = signUp(name, emoji);
+      const fgId = newUser.familyGroupId;
+      if (fgId) {
+        const after = useStore.getState();
+        const group = after.familyGroups.find((g) => g.id === fgId);
+        await pushState({
+          familyGroupId: fgId,
+          familyGroupName: group?.name ?? newUser.name,
+          state: pickBlob(after),
+          updatedBy: newUser.id,
+        });
+      }
       navigate('/', { replace: true });
     } catch (e: any) {
       setError(e?.message ?? '가입에 실패했어요');
+    } finally {
+      setBusy(false);
     }
   };
 
-  const submitAcceptInvite = () => {
-    if (!invite) return;
+  const submitAcceptInvite = async () => {
+    if (!invite || busy) return;
     setError(null);
+    setBusy(true);
     try {
-      acceptInvite(invite, name, emoji);
+      // 1) 초대 그룹의 cloud state pull
+      const remote = await pullState(invite.familyGroupId);
+      if (!remote) {
+        setError('초대 링크가 유효하지 않거나 만료됐어요. 초대자에게 다시 받아주세요.');
+        return;
+      }
+      // 2) cloud state 를 로컬에 적용 (currentUserId / initialized 는 보존됨)
+      useStore.setState(remote.state);
+      // 3) 자기 자신을 users / familyGroups 에 추가 (기존 acceptInvite 로직 재사용)
+      const newUser = acceptInvite(invite, name, emoji);
+      // 4) 갱신된 state 를 cloud 에 push — 다른 멤버에게 즉시 전파
+      const after = useStore.getState();
+      await pushState({
+        familyGroupId: invite.familyGroupId,
+        familyGroupName: invite.familyGroupName,
+        state: pickBlob(after),
+        updatedBy: newUser.id,
+      });
       navigate('/', { replace: true });
     } catch (e: any) {
       setError(e?.message ?? '가입에 실패했어요');
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -120,7 +157,7 @@ export default function Login() {
             <button
               className="primary"
               onClick={submitAcceptInvite}
-              disabled={!name.trim()}
+              disabled={!name.trim() || busy}
               style={{ flex: 1 }}
             >
               가입하고 합류
@@ -176,7 +213,7 @@ export default function Login() {
             <button
               className="primary"
               onClick={submitSignUp}
-              disabled={!name.trim()}
+              disabled={!name.trim() || busy}
               style={{ flex: 1 }}
             >
               가입하기

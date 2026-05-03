@@ -28,6 +28,7 @@ import BottomNav from './components/BottomNav';
 import AccountSwitcher from './components/AccountSwitcher';
 import TxAccountFilter from './components/TxAccountFilter';
 import { usePageRuntime, useRouteMeta } from './stores/runtime';
+import { useCloudSync } from './lib/useCloudSync';
 
 // Stats는 recharts를 쓰므로 lazy-load (초기 번들에서 제외 → 모바일 초기 로딩 빠르게)
 const Stats = lazy(() => import('./pages/Stats'));
@@ -39,6 +40,9 @@ export default function App() {
   const setCurrentUser = useStore((s) => s.setCurrentUser);
   const materializeRecurringRules = useStore((s) => s.materializeRecurringRules);
   const navigate = useNavigate();
+
+  // 로그인 상태일 때 자동으로 Supabase 와 양방향 동기화. 미로그인 시 noop.
+  useCloudSync();
 
   // 상단 정산 아이콘 배지 — 본인이 청구한/받을 입장인 미완료 정산서 합계.
   const pendingSettleCount = useMemo(() => {
