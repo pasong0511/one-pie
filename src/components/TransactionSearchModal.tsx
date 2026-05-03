@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Account, MainCategory, splitBillStatusMeta, SplitBill, Transaction, User } from '../types';
 import { useStore } from '../store';
 import { formatKRW } from '../utils/format';
@@ -22,8 +23,14 @@ export default function TransactionSearchModal({
   onClose: () => void;
 }) {
   const splitBills: SplitBill[] = useStore((s) => s.splitBills);
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const goSettle = (billId: string) => {
+    onClose();
+    navigate(`/settle/${billId}`);
+  };
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -149,7 +156,14 @@ export default function TransactionSearchModal({
                       </span>
                     )}
                     {t.splitBillId && t.splitRole && (
-                      <span className="chip status-done" style={{ marginLeft: 6, fontSize: 10 }}>
+                      <span
+                        className="chip status-done settle-chip-link"
+                        style={{ marginLeft: 6, fontSize: 10 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          goSettle(t.splitBillId!);
+                        }}
+                      >
                         {t.splitRole === 'inflow' ? '↩ 정산 입금' : '↪ 정산 출금'}
                       </span>
                     )}
@@ -159,8 +173,12 @@ export default function TransactionSearchModal({
                       const meta = splitBillStatusMeta(linked.status);
                       return (
                         <span
-                          className={`chip ${meta.className}`}
+                          className={`chip ${meta.className} settle-chip-link`}
                           style={{ marginLeft: 6, fontSize: 10 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            goSettle(linked.id);
+                          }}
                         >
                           {meta.emoji} {meta.label}
                         </span>

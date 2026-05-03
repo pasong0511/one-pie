@@ -35,9 +35,22 @@ const Stats = lazy(() => import('./pages/Stats'));
 export default function App() {
   const currentUserId = useStore((s) => s.currentUserId);
   const users = useStore((s) => s.users);
+  const splitBills = useStore((s) => s.splitBills);
   const setCurrentUser = useStore((s) => s.setCurrentUser);
   const materializeRecurringRules = useStore((s) => s.materializeRecurringRules);
   const navigate = useNavigate();
+
+  // 상단 정산 아이콘 배지 — 본인이 청구한/받을 입장인 미완료 정산서 합계.
+  const pendingSettleCount = useMemo(() => {
+    if (!currentUserId) return 0;
+    let n = 0;
+    for (const b of splitBills) {
+      if (b.status === 'settled' || b.status === 'cancelled' || b.status === 'rejected') continue;
+      if (b.authorId === currentUserId) n++;
+      else if (b.debtor.kind === 'user' && b.debtor.userId === currentUserId) n++;
+    }
+    return n;
+  }, [splitBills, currentUserId]);
 
   useEffect(() => {
     if (currentUserId) materializeRecurringRules();
@@ -109,6 +122,18 @@ export default function App() {
         {showBack && <h1 className="topbar-title topbar-title-center">{pageTitle ?? ''}</h1>}
         {!hideChrome && (
           <div className="topbar-right">
+            <button
+              type="button"
+              className="topbar-icon-btn"
+              onClick={() => navigate('/settle')}
+              title="정산"
+              aria-label="정산"
+            >
+              <span style={{ fontSize: 18, lineHeight: 1 }}>🤝</span>
+              {pendingSettleCount > 0 && (
+                <span className="topbar-icon-badge">{pendingSettleCount}</span>
+              )}
+            </button>
             <button
               type="button"
               className="topbar-icon-btn"

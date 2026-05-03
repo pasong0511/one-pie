@@ -203,7 +203,14 @@ export default function AccountDetail() {
                   </span>
                 )}
                 {t.splitBillId && t.splitRole && (
-                  <span className="chip status-done" style={{ marginLeft: 6, fontSize: 10 }}>
+                  <span
+                    className="chip status-done settle-chip-link"
+                    style={{ marginLeft: 6, fontSize: 10 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/settle/${t.splitBillId}`);
+                    }}
+                  >
                     {t.splitRole === 'inflow' ? '↩ 정산 입금' : '↪ 정산 출금'}
                   </span>
                 )}
@@ -213,8 +220,12 @@ export default function AccountDetail() {
                   const meta = splitBillStatusMeta(linked.status);
                   return (
                     <span
-                      className={`chip ${meta.className}`}
+                      className={`chip ${meta.className} settle-chip-link`}
                       style={{ marginLeft: 6, fontSize: 10 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/settle/${linked.id}`);
+                      }}
                     >
                       {meta.emoji} {meta.label}
                     </span>

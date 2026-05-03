@@ -191,6 +191,25 @@ a {
   background: var(--bg-hover);
   color: var(--text);
 }
+.topbar-icon-btn {
+  position: relative;
+}
+.topbar-icon-badge {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--bg, #fff);
+}
 .topbar .user-chip {
   display: inline-flex;
   align-items: center;
@@ -1519,6 +1538,33 @@ hr {
 }
 .chip.status-rejected {
   background: var(--danger-weak);
+  color: var(--danger);
+}
+.chip.settle-chip-link {
+  cursor: pointer;
+}
+.chip.settle-chip-link:hover {
+  filter: brightness(0.92);
+}
+
+/* 홈 정산 카드 — 한 줄짜리 요약 (받을/보낼 각 1줄) */
+.settle-summary-line {
+  padding: 6px 0;
+  font-size: 14px;
+}
+.settle-summary-line + .settle-summary-line {
+  border-top: 1px solid var(--border-weak, var(--bg-alt));
+}
+.settle-summary-label {
+  color: var(--text-muted);
+}
+.settle-summary-value {
+  font-weight: 600;
+}
+.settle-summary-value.pos {
+  color: var(--accent);
+}
+.settle-summary-value.neg {
   color: var(--danger);
 }
 

@@ -67,43 +67,24 @@ function SettleSection() {
   return (
     <section className="page-section page-section-settle">
       <div className="section-title">정산</div>
-      {receiveCount > 0 && (
-        <div
-          className="card hover settle-summary-card"
-          onClick={() => navigate('/settle')}
-          style={{ marginBottom: 8 }}
-        >
-          <div className="row between">
-            <div>
-              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                🤝 받을 정산
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 700, marginTop: 2 }}>
-                {receiveCount}건 · +{formatKRW(receiveTotal)}
-              </div>
-            </div>
-            <span style={{ color: 'var(--text-faint)', fontSize: 18 }}>›</span>
+      <div className="card hover settle-summary-card" onClick={() => navigate('/settle')}>
+        {receiveCount > 0 && (
+          <div className="row between settle-summary-line">
+            <span className="settle-summary-label">🤝 받을 정산</span>
+            <span className="settle-summary-value pos">
+              {receiveCount}건 · +{formatKRW(receiveTotal)}
+            </span>
           </div>
-        </div>
-      )}
-      {payCount > 0 && (
-        <div
-          className="card hover settle-summary-card"
-          onClick={() => navigate('/settle')}
-        >
-          <div className="row between">
-            <div>
-              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                📤 보낼 정산
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 700, marginTop: 2, color: 'var(--danger)' }}>
-                {payCount}건 · -{formatKRW(payTotal)}
-              </div>
-            </div>
-            <span style={{ color: 'var(--text-faint)', fontSize: 18 }}>›</span>
+        )}
+        {payCount > 0 && (
+          <div className="row between settle-summary-line">
+            <span className="settle-summary-label">📤 보낼 정산</span>
+            <span className="settle-summary-value neg">
+              {payCount}건 · -{formatKRW(payTotal)}
+            </span>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </section>
   );
 }

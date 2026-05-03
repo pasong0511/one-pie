@@ -186,6 +186,7 @@ export default function Calendar() {
             currentUserId={currentUserId}
             today={today}
             onEdit={goEdit}
+            onSplitClick={(id) => navigate(`/settle/${id}`)}
           />
         )}
 
@@ -205,6 +206,7 @@ export default function Calendar() {
             splitBills={splitBills}
             currentUserId={currentUserId}
             onEdit={goEdit}
+            onSplitClick={(id) => navigate(`/settle/${id}`)}
           />
         )}
       </section>
@@ -235,8 +237,9 @@ function ListView(props: {
   currentUserId: string;
   today: string;
   onEdit: (id: string) => void;
+  onSplitClick: (billId: string) => void;
 }) {
-  const { groups, taxonomy, accounts, users, splitBills, currentUserId, today, onEdit } = props;
+  const { groups, taxonomy, accounts, users, splitBills, currentUserId, today, onEdit, onSplitClick } = props;
 
   if (groups.length === 0) {
     return <div className="empty" style={{ padding: 32 }}>이번 달 거래가 없어요.</div>;
@@ -286,7 +289,7 @@ function ListView(props: {
                       {authorName ? ` · ${authorName}` : ''}
                       {t.isSupplement && ' · 💰 추경'}
                       {t.kind === 'transfer' && t.splitRole !== 'inflow' && t.splitRole !== 'outflow' && ' · ↔ 이체'}
-                      {renderSplitChips(t, splitBills)}
+                      {renderSplitChips(t, splitBills, onSplitClick)}
                     </div>
                   </div>
                   <div className={`cal-list-row-amt ${t.amount >= 0 ? 'pos' : 'neg'}`}>
@@ -321,6 +324,7 @@ function CalendarView(props: {
   splitBills: SplitBill[];
   currentUserId: string;
   onEdit: (id: string) => void;
+  onSplitClick: (billId: string) => void;
 }) {
   const {
     grid,
@@ -333,6 +337,7 @@ function CalendarView(props: {
     selectedExpense,
     accounts,
     users,
+    onSplitClick,
     splitBills,
     currentUserId,
     onEdit,
@@ -455,7 +460,7 @@ function CalendarView(props: {
                       ↔ 이체
                     </span>
                   )}
-                  {renderSplitChips(t, splitBills)}
+                  {renderSplitChips(t, splitBills, onSplitClick)}
                 </div>
               </div>
               <div className={`cal-tx-amt ${t.amount >= 0 ? 'pos' : 'neg'}`}>
@@ -500,14 +505,23 @@ function formatDayHeader(iso: string, today: string): string {
   return `${dd}일 ${dow}요일`;
 }
 
-// 정산 관련 칩 렌더 — 원본 거래(여러 bill 가능) / 자동 생성된 정산 입출금 거래.
-function renderSplitChips(t: Transaction, splitBills: SplitBill[]): ReactNode {
+// 정산 관련 칩 렌더 — 칩 클릭 시 거래 페이지가 아닌 정산서 상세로 직접 진입.
+function renderSplitChips(
+  t: Transaction,
+  splitBills: SplitBill[],
+  onSplitClick: (billId: string) => void,
+): ReactNode {
   // 자동 생성된 거래
   if (t.splitBillId && t.splitRole) {
+    const billId = t.splitBillId;
     return (
       <span
-        className="chip status-done"
+        className="chip status-done settle-chip-link"
         style={{ marginLeft: 6, fontSize: 10 }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSplitClick(billId);
+        }}
       >
         {t.splitRole === 'inflow' ? '↩ 정산 입금' : '↪ 정산 출금'}
       </span>
@@ -518,7 +532,14 @@ function renderSplitChips(t: Transaction, splitBills: SplitBill[]): ReactNode {
   if (!linked) return null;
   const meta = splitBillStatusMeta(linked.status);
   return (
-    <span className={`chip ${meta.className}`} style={{ marginLeft: 6, fontSize: 10 }}>
+    <span
+      className={`chip ${meta.className} settle-chip-link`}
+      style={{ marginLeft: 6, fontSize: 10 }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSplitClick(linked.id);
+      }}
+    >
       {meta.emoji} {meta.label}
     </span>
   );

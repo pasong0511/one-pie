@@ -533,12 +533,14 @@ type SplitDebtor =
   - 신규 거래: 모달에서 받은 draft 를 보관 → 거래 저장 시 같이 `addSplitBill`.
   - 편집 거래: 모달 적용 즉시 `addSplitBill` 또는 `updateSplitBill`. 정산서 상세 편집은 `/settle/:id` 에서.
 - 모달 (`SplitBillModal`): debtor 종류 탭 (가족 / 외부 / 미분류) → 청구액 (거래 금액 이내) → 메모 → 외부/미분류일 때만 `autoCreateInflowTx` 토글.
-- 홈 대시보드 (`/`): "정산" 섹션 — 받을 정산 N건 / 보낼 정산 N건 요약 카드 (`HomeSection='settle'` 토글). 미완료 건이 0이면 섹션 통째로 숨김. 클릭 시 `/settle` 진입.
+- 홈 대시보드 (`/`): "정산" 섹션 — 한 카드에 받을/보낼 두 줄만 (`🤝 받을 정산  N건 · +합계` / `📤 보낼 정산  N건 · -합계`). 건수 0이면 "없음". 둘 다 0이면 섹션 숨김. 카드 탭 시 `/settle` 통합 뷰. (개별 정산서 미리보기는 가독성 위해 빼고, 상세는 `/settle` 에서 처리.)
+- 상단 topbar 우측에 정산 아이콘 (`🤝`) — 미완료 건수 빨강 배지. 알림 벨 좌측에 배치, 탭 시 `/settle`.
 
 **리스트 칩** (Calendar 목록·달력, AccountDetail, TransactionSearchModal)
 
 - 원본 거래 행: status 따라 `📝 작성중` / `🤝 요청중` / `👁 확인중` / `✅ 정산완료` / `✖ 취소됨` / `🚫 반려됨` (1:1 이라 칩 최대 1개)
 - 자동 생성된 행: `↩ 정산 입금` (inflow) / `↪ 정산 출금` (outflow). transfer 칩(`↔ 이체`)은 표시 안 함 — 정산 칩이 우선.
+- 칩 자체가 클릭 타깃 (`.settle-chip-link`) — 거래 편집 페이지를 거치지 않고 `/settle/:billId` 로 직접 진입 (행 클릭은 거래 편집으로 가니 stopPropagation).
 
 **메시지 공유**
 
